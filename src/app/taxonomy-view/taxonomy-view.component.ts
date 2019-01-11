@@ -32,6 +32,12 @@ export class TaxonomyViewComponent implements AfterViewInit {
     "text_fill": "#000000",
     "link_stroke_style": "#000000"
   };
+
+  private canvasOffset: {[element: string]: number} = {
+    "x": 50,
+    "y": 0
+  }
+  
   private heatmap: {[element: string]: number} = {
     "square_size": 10
   }
@@ -40,7 +46,8 @@ export class TaxonomyViewComponent implements AfterViewInit {
   private cx: CanvasRenderingContext2D;
 
   private taxonomyTree: Taxon = new Taxon();
-  public treeDescendants: HierarchyPointNode<Taxon>[];
+  private treeDescendants: HierarchyPointNode<Taxon>[];
+  private pathToRoot: Taxon[] = [];
   private canvas_wrapper;
 
   constructor(
@@ -50,22 +57,42 @@ export class TaxonomyViewComponent implements AfterViewInit {
   ngAfterViewInit(){
     this.getScreenSize();
     this.setUpCanvas();
-    this.taxonomyTreeService.getTree().subscribe(_ => this.drawCanvas());
+    this.taxonomyTreeService.getTree().subscribe(_ => this.drawCanvas(1));
   }
 
   @HostListener('window:resize', ['$event'])
   getScreenSize(event?) {
     this.screenHeight = window.innerHeight;
     this.screenWidth = window.innerWidth;
-    console.log(this.screenHeight, this.screenWidth);
   }
 
-  drawCanvas(): void {
-    let t: Taxon[] = this.taxonomyTreeService.setViewPort();
+  drawCanvas(tax_id: number): void {
+    let t: Taxon[] = this.taxonomyTreeService.setViewPort(tax_id);
+    this.pathToRoot = t;
     this.taxonomyTree = t[t.length-1];
-    this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth/2);
+    this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth/2, this.canvasOffset.x, this.canvasOffset.y);
+    console.log(this.taxonomyTree);
     this.canvas_wrapper = d3.select("#wrapper");
     this.update();
+  }
+
+  onCanvasClick(event): void {
+    let _y = event.clientX - 15;
+    let _x = event.clientY;
+    let _this = this;
+    d3.selectAll("custom-node")
+      .each(function(d: HierarchyPointNode<Taxon>){
+	if(_this.checkWithinRadius([d.y, d.x], [_y, _x], _this.nodeSize + _this.strokeWidth)){
+	  console.log(d.data.tax_id);
+	  _this.drawCanvas(d.data.tax_id);
+	}
+      })
+  }
+
+  checkWithinRadius(p1: [number, number], p2: [number, number], r: number): boolean {
+    let a = (p1[0] - p2[0])**2 + (p1[1] - p2[1])**2;
+    a = Math.sqrt(a);
+    return (a <= r);
   }
 
   update(): void {
@@ -109,7 +136,7 @@ export class TaxonomyViewComponent implements AfterViewInit {
     let node_exit = node.exit()
       .remove();
 
-    let link = this.canvas_wrapper.selectAll("custom_link").data(links);
+    let link = this.canvas_wrapper.selectAll("custom-link").data(links);
 
     let linkEnter = link.enter()
       .append("custom-link")
@@ -131,7 +158,8 @@ export class TaxonomyViewComponent implements AfterViewInit {
 
     let linkUpdate = linkEnter.merge(link);
 
-    linkUpdate.transition()
+    linkUpdate
+      .transition()
       .duration(duration)
       .attr("sx", function(d){
     	return d.parent.y;
@@ -149,16 +177,16 @@ export class TaxonomyViewComponent implements AfterViewInit {
     let linkExit = link.exit()
       .transition()
       .duration(duration)
-      .attr("sx", function(d: {parent: {y: number}}){
+      .attr("sx", function(d){
     	return d.parent.y;
       })
-      .attr("sy", function(d: {parent: {x: number}}){
+      .attr("sy", function(d){
     	return d.parent.x;
       })
-      .attr("tx", function(d: {parent: {y: number}}){
+      .attr("tx", function(d){
     	return d.parent.y;
       })
-      .attr("ty", function(d: {parent: {x: number}}){
+      .attr("ty", function(d){
     	return d.parent.x;
       })
       .remove();
@@ -170,12 +198,11 @@ export class TaxonomyViewComponent implements AfterViewInit {
     //   .domain([Math.min.apply(Math, m1[0]), Math.max.apply(Math, m1[1])]);
     // scales.percentage[1] = d3.scaleSequential(d3.interpolateBlues)
     //   .domain([Math.min.apply(Math, m2[0]), Math.max.apply(Math, m2[1])]);
-    var _ = this;
-    // let t = d3.timer(function(elapsed) {
-      _.renderCanvas();
-    //   if (elapsed > duration + (0.3 * duration)) t.stop();
-    // });
-    
+    let _this = this;
+    let t = d3.timer(function(elapsed) {
+      _this.renderCanvas();
+      if (elapsed > duration + (2 * duration)) t.stop();
+    });
   }
 
   renderCanvas(): void {
@@ -245,8 +272,10 @@ export class TaxonomyViewComponent implements AfterViewInit {
     let rect = canvasEl.getBoundingClientRect();
     canvasEl.width = (this.screenWidth/2) * dpr;
     canvasEl.height = (this.screenHeight) * dpr;
+    canvasEl.style.width = String(this.screenWidth/2)+"px";
+    canvasEl.style.height = String(this.screenHeight) + "px";
 
     this.cx = canvasEl.getContext('2d');
-    this.cx.scale(dpr/2, dpr);
+    this.cx.scale(dpr, dpr);
   }
 }

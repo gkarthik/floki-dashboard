@@ -41,20 +41,21 @@ export class TaxonomyTreeService {
       );
   }
 
-  getLayout(data: Taxon, height:number, width: number): HierarchyPointNode<Taxon>[] {
+  getLayout(data: Taxon, height:number, width: number, offsetX: number, offsetY: number): HierarchyPointNode<Taxon>[] {
     let root = d3.hierarchy(data, function(d){return d.children;});
-    let tree_layout = d3.cluster<Taxon>().size([height, width]);
+    let tree_layout = d3.cluster<Taxon>().size([height-offsetX*2, width-offsetY*2]);
     let tree = tree_layout(root);
     let nodes = tree.descendants();
     nodes.forEach(function(d){
-      d.y = (d.depth * width/3);
+      d.y = (d.depth * width/3) + offsetX;
+      d.x += offsetY;
     });
     return nodes;
   }
 
   setViewPort(tax_id: number = 1): Taxon[] {
     let data: Taxon = _.cloneDeep(this.jsonData);
-    let path_to_root: Taxon[] = this.getPathToNode(data, 1);
+    let path_to_root: Taxon[] = this.getPathToNode(data, tax_id);
     this.removeChildrenAtDepth(path_to_root[path_to_root.length-1]);
     return path_to_root;
   }
