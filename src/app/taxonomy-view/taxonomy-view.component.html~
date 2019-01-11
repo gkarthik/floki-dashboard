@@ -1,0 +1,10 @@
+<div class="row">
+  <div class="col">
+    <canvas #wrapper id="wrapper">
+      <app-node *ngFor="let node of treeDescendants"></app-node>
+    </canvas>
+  </div>
+  <div class="col">
+    Details
+  </div>
+</div>

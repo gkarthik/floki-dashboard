@@ -1,0 +1,63 @@
+import { Component, OnInit, AfterViewInit, HostListener, ViewChild, ElementRef } from '@angular/core';
+
+import { TaxonomyTreeService } from '../taxonomy-tree.service';
+import { NodeComponent } from '../node/node.component';
+
+import { Taxon } from '../taxon';
+
+import { HierarchyPointNode } from 'd3-hierarchy'
+
+import * as d3 from 'd3';
+
+@Component({
+  selector: 'app-taxonomy-view',
+  templateUrl: './taxonomy-view.component.html',
+  styleUrls: ['./taxonomy-view.component.css']
+})
+export class TaxonomyViewComponent implements AfterViewInit {
+
+  @ViewChild('wrapper') private canvas: ElementRef;
+
+  private screenWidth;
+  private screenHeight;
+
+  private cx: CanvasRenderingContext2D;
+
+  private taxonomyTree: Taxon = new Taxon();
+  public treeDescendants: HierarchyPointNode<{}>[];
+
+  constructor(
+    private taxonomyTreeService: TaxonomyTreeService
+  ) { }
+
+  ngAfterViewInit(){
+    this.getScreenSize();
+    this.setUpCanvas();
+    this.taxonomyTreeService.getTree().subscribe(_ => this.drawCanvas());
+  }
+
+  @HostListener('window:resize', ['$event'])
+  getScreenSize(event?) {
+    this.screenHeight = window.innerHeight;
+    this.screenWidth = window.innerWidth;
+    console.log(this.screenHeight, this.screenWidth);
+  }
+
+  drawCanvas(): void {
+    let t: Taxon[] = this.taxonomyTreeService.setViewPort();
+    this.taxonomyTree = t[t.length-1];
+    this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth/2);
+  }
+
+  setUpCanvas(): void {
+    const canvasEl: HTMLCanvasElement = this.canvas.nativeElement;
+
+    let dpr: number = window.devicePixelRatio || 1;
+    let rect = canvasEl.getBoundingClientRect();
+    canvasEl.width = (this.screenWidth/2) * dpr;
+    canvasEl.height = (this.screenHeight) * dpr;
+
+    this.cx = canvasEl.getContext('2d');
+    this.cx.scale(dpr, dpr);
+  }
+}
