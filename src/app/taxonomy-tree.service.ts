@@ -60,6 +60,29 @@ export class TaxonomyTreeService {
     return path_to_root;
   }
 
+  getRangeOfKeyAtDepth(_data : Taxon, key: string, depth: number, min?: number[], max?: number[]): [number[], number[]] {
+    if(min == null || max == null){
+      min = Array(_data[key].length).fill(Infinity);
+      max = Array(_data[key].length).fill(-1);
+    }
+    if(_data.depth == depth){
+      for (let i = 0; i < _data[key].length; i++) {
+	min[i] = (_data[key][i] < min[i]) ? _data[key][i] : min[i];
+	max[i] = (_data[key][i] > max[i]) ? _data[key][i] : max[i];
+      }
+    }
+    var m;
+    if(_data.children == null || _data.depth > depth){
+      return [min, max];
+    }
+    for (let i = 0; i < _data.children.length; i++) {
+      m = this.getRangeOfKeyAtDepth(_data.children[i], key, depth, min, max);
+      min = m[0];
+      max = m[1];
+    }
+    return [min, max];
+  }
+
   removeChildrenAtDepth(node:Taxon, depth: number = 2): boolean {
     if(depth == 0){
       delete node.children;

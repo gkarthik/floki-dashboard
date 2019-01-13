@@ -5,8 +5,9 @@ import { NodeComponent } from '../node/node.component';
 
 import { Taxon } from '../taxon';
 
-import { HierarchyPointNode } from 'd3-hierarchy'
-import { Selection } from 'd3-selection'
+import { HierarchyPointNode } from 'd3-hierarchy';
+import { Selection } from 'd3-selection';
+import { ScaleSequential } from 'd3-scale';
 
 import * as d3 from 'd3';
 
@@ -31,6 +32,10 @@ export class TaxonomyViewComponent implements AfterViewInit {
     "stroke_style": "#000000",
     "text_fill": "#000000",
     "link_stroke_style": "#000000"
+  };
+
+  private scales: {[id: string]: [ScaleSequential<any>, ScaleSequential<any>]} = {
+    "percentage": [null, null]
   };
 
   private canvasOffset: {[element: string]: number} = {
@@ -93,6 +98,25 @@ export class TaxonomyViewComponent implements AfterViewInit {
     let a = (p1[0] - p2[0])**2 + (p1[1] - p2[1])**2;
     a = Math.sqrt(a);
     return (a <= r);
+  }
+
+  drawHeatmap(nodeEl, d: HierarchyPointNode<Taxon>, key: string): void{
+    var start_x = parseFloat(nodeEl.attr("x")) + this.heatmap.square_size,
+    start_y = parseFloat(nodeEl.attr("y"));
+    if(d.children !=null){
+      start_x = parseFloat(nodeEl.attr("x")) - (this.heatmap.square_size * d.data[key].length)/2;
+      start_y = start_y + 22;
+    }
+    for (var i = 0; i < d.data[key].length; i++) {
+      this.cx.beginPath();
+      this.cx.fillStyle = this.scales[key][d.depth-1](d.data[key][i]);
+      this.cx.moveTo(start_x + (this.heatmap.square_size * i), start_y - (this.heatmap.square_size/2));
+      this.cx.rect(start_x + (this.heatmap.square_size * i), start_y - (this.heatmap.square_size/2), this.heatmap.square_size, this.heatmap.square_size);
+      this.cx.fill();
+      this.cx.strokeStyle = "#000000";
+      this.cx.stroke();
+      this.cx.closePath();
+    }
   }
 
   update(): void {
@@ -191,13 +215,14 @@ export class TaxonomyViewComponent implements AfterViewInit {
       })
       .remove();
 
-    // var m1 = get_range_at_depth(data, "percentage", data.depth + 1);
-    // var m2 = get_range_at_depth(data, "percentage", data.depth + 2);
+    let m1: [number[], number[]] = this.taxonomyTreeService.getRangeOfKeyAtDepth(this.taxonomyTree, "percentage", this.taxonomyTree.depth + 1);
+    let m2: [number[], number[]] = this.taxonomyTreeService.getRangeOfKeyAtDepth(this.taxonomyTree, "percentage", this.taxonomyTree.depth + 2);
 
-    // scales.percentage[0] = d3.scaleSequential(d3.interpolateGreens)
-    //   .domain([Math.min.apply(Math, m1[0]), Math.max.apply(Math, m1[1])]);
-    // scales.percentage[1] = d3.scaleSequential(d3.interpolateBlues)
-    //   .domain([Math.min.apply(Math, m2[0]), Math.max.apply(Math, m2[1])]);
+    this.scales["percentage"][0] = d3.scaleSequential(d3.interpolateGreens)
+      .domain([Math.min.apply(Math, m1[0]), Math.max.apply(Math, m1[1])]);
+    this.scales["percentage"][1] = d3.scaleSequential(d3.interpolateBlues)
+      .domain([Math.min.apply(Math, m2[0]), Math.max.apply(Math, m2[1])]);
+
     let _this = this;
     let t = d3.timer(function(elapsed) {
       _this.renderCanvas();
@@ -254,7 +279,7 @@ export class TaxonomyViewComponent implements AfterViewInit {
       _this.cx.fill();
       _this.cx.closePath();
       if(d.depth > 0){
-	// draw_heatmap(_node, d, "percentage");
+	_this.drawHeatmap(_node, d, "percentage");
       }
     });
     // this.canvas_wrapper.selectAll("custom-node").each(function(d){
