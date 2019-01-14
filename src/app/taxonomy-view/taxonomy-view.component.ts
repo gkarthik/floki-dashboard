@@ -1,7 +1,6 @@
 import { Component, OnInit, AfterViewInit, HostListener, ViewChild, ElementRef } from '@angular/core';
 
 import { TaxonomyTreeService } from '../taxonomy-tree.service';
-import { NodeComponent } from '../node/node.component';
 
 import { Taxon } from '../taxon';
 
@@ -49,6 +48,7 @@ export class TaxonomyViewComponent implements AfterViewInit {
   
 
   private cx: CanvasRenderingContext2D;
+  private canvasEl: HTMLCanvasElement;
 
   private taxonomyTree: Taxon = new Taxon();
   private treeDescendants: HierarchyPointNode<Taxon>[];
@@ -82,6 +82,19 @@ export class TaxonomyViewComponent implements AfterViewInit {
   }
 
   onCanvasClick(event): void {
+    let _y = event.clientX - 15;
+    let _x = event.clientY;
+    let _this = this;
+    d3.selectAll("custom-node")
+      .each(function(d: HierarchyPointNode<Taxon>){
+	if(_this.checkWithinRadius([d.y, d.x], [_y, _x], _this.nodeSize + _this.strokeWidth)){
+	  console.log(d.data.tax_id);
+	  _this.drawCanvas(d.data.tax_id);
+	}
+      })
+  }
+
+  onCanvasHover(event): void {
     let _y = event.clientX - 15;
     let _x = event.clientY;
     let _this = this;
@@ -292,7 +305,7 @@ export class TaxonomyViewComponent implements AfterViewInit {
 
   setUpCanvas(): void {
     const canvasEl: HTMLCanvasElement = this.canvas.nativeElement;
-
+    this.canvasEl = canvasEl;
     let dpr: number = window.devicePixelRatio || 1;
     let rect = canvasEl.getBoundingClientRect();
     canvasEl.width = (this.screenWidth/2) * dpr;

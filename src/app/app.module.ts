@@ -5,15 +5,13 @@ import { NgModule } from '@angular/core';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { TaxonomyViewComponent } from './taxonomy-view/taxonomy-view.component';
-import { NodeComponent } from './node/node.component';
-import { LinkComponent } from './link/link.component';
+import { NodeBarChartComponent } from './node-bar-chart/node-bar-chart.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     TaxonomyViewComponent,
-    NodeComponent,
-    LinkComponent
+    NodeBarChartComponent
   ],
   imports: [
     HttpClientModule,

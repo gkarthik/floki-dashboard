@@ -10,8 +10,6 @@ import * as d3 from 'd3';
 import { HierarchyPointNode } from 'd3-hierarchy'
 
 import { Taxon } from './taxon';
-import { Node } from './node';
-import { Link } from './link';
 
 @Injectable({
   providedIn: 'root'
