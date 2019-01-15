@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, HostListener, ViewChild, ElementRef, Input } from '@angular/core';
 import { NodeBarChartComponent } from '../node-bar-chart/node-bar-chart.component';
 
 import { TaxonomyTreeService } from '../taxonomy-tree.service';
@@ -22,6 +22,10 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
 
   private screenWidth = 100;
   private screenHeight = 100;
+
+  private minReads: number = 10;
+  private sigLevel: number = 0.05;
+  private minOddsRatio: number = 1;
 
   // Styles
   private nodeSize: number = 5;
@@ -80,15 +84,53 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     let t: Taxon[] = this.taxonomyTreeService.setViewPort(tax_id);
     this.pathToRoot = t;
     this.taxonomyTree = t[t.length-1];
-    this.currentNode = t[t.length - 1];
+    this.filterTaxonomyTree(this.taxonomyTree);
+    this.currentNode = this.taxonomyTree;
     this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth/2, this.canvasOffset.x, this.canvasOffset.y);
     this.canvasWrapper = d3.select("#wrapper");
     this.update();
   }
 
+  filterTaxonomyTree(d: Taxon): boolean {
+    let cond = [], keep_node: boolean = false, tmp, _this = this;
+    // Minimum number of reads
+    keep_node = d.taxon_reads.some(function(x){
+      return x >= _this.minReads;
+    });
+    cond.push(keep_node);
+    // Maximum pvalue
+    keep_node = d.pvalue.some(function(x){
+      return x <= _this.sigLevel;
+    });
+    cond.push(keep_node);
+    // Minimum odds ratio
+    keep_node = d.oddsratio.some(function(x){
+      return x >= _this.minOddsRatio;
+    });
+    cond.push(keep_node);
+    keep_node = cond.every(function(x){
+      return x;
+    });
+    cond = [keep_node];
+    if(d.children != null){
+      for (var i = 0; i < d.children.length; i++) {
+	tmp = this.filterTaxonomyTree(d.children[i]);
+	cond.push(tmp);
+	if(!tmp){
+	  d.children.splice(i, 1);
+	  i--;
+	}
+      }
+    }
+    keep_node = cond.some(function(x){
+      return x;
+    });
+    return keep_node;
+  }
+
   onCanvasClick(event): void {
-    let _y = event.clientX - 15;
-    let _x = event.clientY + window.scrollY;
+    let _y = event.clientX - this.canvasEl.getBoundingClientRect()["x"];
+    let _x = event.clientY - this.canvasEl.getBoundingClientRect()["y"];
     let _this = this;
     d3.selectAll("custom-node")
       .each(function(d: HierarchyPointNode<Taxon>){
@@ -99,15 +141,13 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   }
 
   onCanvasHover(event): void {
-    let _y = event.clientX - 15;
-    let _x = event.clientY + window.scrollY;
+    let _y = event.clientX - this.canvasEl.getBoundingClientRect()["x"];
+    let _x = event.clientY - this.canvasEl.getBoundingClientRect()["y"];
     let _this = this;
-    console.log(event);
     let hoverEvent: boolean = false;
     d3.selectAll("custom-node")
       .each(function(d: HierarchyPointNode<Taxon>){
 	if(_this.checkWithinRadius([d.y, d.x], [_y, _x], _this.nodeSize + _this.strokeWidth)){
-	  console.log(d.y, d.x);
 	  d3.select(this).attr("fill", _this.colorScheme["hover_fill"]);
 	  _this.currentNode = d.data;
 	  _this.canvasEl.style.cursor = "pointer";
@@ -260,7 +300,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   renderCanvas(): void {
     let _this = this;
     let tx: number, ty:number, sx: number, sy:number;
-    _this.cx.clearRect(0, 0, this.screenWidth/2, this.screenHeight);
+    this.cx.clearRect(0, 0, this.screenWidth/2, this.screenHeight);
     this.canvasWrapper.selectAll("custom-link").each(function(d){
       let _link: Selection<any, any, any, any> = d3.select(this);
       _this.cx.beginPath();

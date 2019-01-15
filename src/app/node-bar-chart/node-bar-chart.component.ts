@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, OnChanges, SimpleChange, SimpleChanges, HostListener, ViewChild, ElementRef, Input } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnChanges, SimpleChange, SimpleChanges, HostListener, ViewChild, ElementRef, Input } from '@angular/core';
 
 import { Taxon } from '../taxon';
 
@@ -12,7 +12,7 @@ import * as _ from "lodash";
   templateUrl: './node-bar-chart.component.html',
   styleUrls: ['./node-bar-chart.component.css']
 })
-export class NodeBarChartComponent implements OnChanges, AfterViewInit {
+export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
 
   @ViewChild('chartWrapper') private canvas: ElementRef;
 
@@ -34,9 +34,12 @@ export class NodeBarChartComponent implements OnChanges, AfterViewInit {
 
   constructor() { }
 
+  ngOnInit(){
+    this.keyTitle = this.key.replace(/_/g, " ");
+  }
+
   ngAfterViewInit(){
     this.setUpCanvas();
-    this.keyTitle = this.key.replace(/_/g, " ");
   }
 
   ngOnChanges(changes: SimpleChanges){
