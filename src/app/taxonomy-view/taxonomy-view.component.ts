@@ -33,6 +33,8 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   private colorScheme: { [element: string]: string } =  {
     "fill": "#4682b4",
     "hover_fill": "#86C67C",
+    "compressed_fill": "#FF0000",
+    "compressed_text_fill": "#FFFFFF",
     "stroke_style": "#000000",
     "text_fill": "#000000",
     "link_stroke_style": "#000000"
@@ -71,6 +73,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
 
   ngAfterViewInit(){
     this.setUpCanvas();
+    this.canvasWrapper = d3.select("#wrapper");
     this.taxonomyTreeService.getTree().subscribe(_ => this.drawCanvas(1));
   }
 
@@ -84,48 +87,19 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     let t: Taxon[] = this.taxonomyTreeService.setViewPort(tax_id);
     this.pathToRoot = t;
     this.taxonomyTree = t[t.length-1];
-    this.filterTaxonomyTree(this.taxonomyTree);
+    this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
     this.currentNode = this.taxonomyTree;
-    this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth/2, this.canvasOffset.x, this.canvasOffset.y);
-    this.canvasWrapper = d3.select("#wrapper");
+    this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth/2, this.canvasOffset.x, this.canvasOffset.y, this.screenWidth/8);
     this.update();
   }
 
-  filterTaxonomyTree(d: Taxon): boolean {
-    let cond = [], keep_node: boolean = false, tmp, _this = this;
-    // Minimum number of reads
-    keep_node = d.taxon_reads.some(function(x){
-      return x >= _this.minReads;
-    });
-    cond.push(keep_node);
-    // Maximum pvalue
-    keep_node = d.pvalue.some(function(x){
-      return x <= _this.sigLevel;
-    });
-    cond.push(keep_node);
-    // Minimum odds ratio
-    keep_node = d.oddsratio.some(function(x){
-      return x >= _this.minOddsRatio;
-    });
-    cond.push(keep_node);
-    keep_node = cond.every(function(x){
-      return x;
-    });
-    cond = [keep_node];
-    if(d.children != null){
-      for (var i = 0; i < d.children.length; i++) {
-	tmp = this.filterTaxonomyTree(d.children[i]);
-	cond.push(tmp);
-	if(!tmp){
-	  d.children.splice(i, 1);
-	  i--;
-	}
-      }
-    }
-    keep_node = cond.some(function(x){
-      return x;
-    });
-    return keep_node;
+  showPathogenic(): void {
+    this.taxonomyTree = this.taxonomyTreeService.filterPathogenic(this.minReads, this.sigLevel, this.minOddsRatio);
+    this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
+    this.pathToRoot = [this.taxonomyTree];
+    this.currentNode = this.taxonomyTree;
+    this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth/2, this.canvasOffset.x, this.canvasOffset.y, this.screenWidth/16);
+    this.update();
   }
 
   onCanvasClick(event): void {
@@ -135,7 +109,8 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     d3.selectAll("custom-node")
       .each(function(d: HierarchyPointNode<Taxon>){
 	if(_this.checkWithinRadius([d.y, d.x], [_y, _x], _this.nodeSize + _this.strokeWidth)){
-	  _this.drawCanvas(d.data.tax_id);
+	  if(d.data.tax_id != -1) // Avoid compressed nodes
+	    _this.drawCanvas(d.data.tax_id);
 	}
       })
   }
@@ -148,12 +123,15 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     d3.selectAll("custom-node")
       .each(function(d: HierarchyPointNode<Taxon>){
 	if(_this.checkWithinRadius([d.y, d.x], [_y, _x], _this.nodeSize + _this.strokeWidth)){
+	  if(d3.select(this).attr("_fill") == null)
+	    d3.select(this).attr("_fill", String(d3.select(this).attr("fill")));
 	  d3.select(this).attr("fill", _this.colorScheme["hover_fill"]);
-	  _this.currentNode = d.data;
+	  if(d.data.tax_id!=-1) // Avoid hover oncompressed nodes
+	    _this.currentNode = d.data;
 	  _this.canvasEl.style.cursor = "pointer";
 	  hoverEvent = true;
-	} else {
-	  d3.select(this).attr("fill", _this.colorScheme["fill"]);
+	} else if(d3.select(this).attr("_fill") != null) {
+	  d3.select(this).attr("fill", d3.select(this).attr("_fill"));
 	}
       });
     if(!hoverEvent)
@@ -175,8 +153,14 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       start_y = start_y + 22;
     }
     for (var i = 0; i < d.data[key].length; i++) {
+      if(d.children == null){
+	this.cx.fillStyle = this.scales[key][1](d.data[key][i]);
+      } else if (d.children.every(function(x){ return (x.children == null); })) {
+	this.cx.fillStyle = this.scales[key][0](d.data[key][i]);
+      } else {
+	continue;
+      }
       this.cx.beginPath();
-      this.cx.fillStyle = this.scales[key][d.depth-1](d.data[key][i]);
       this.cx.moveTo(start_x + (this.heatmap.square_size * i), start_y - (this.heatmap.square_size/2));
       this.cx.rect(start_x + (this.heatmap.square_size * i), start_y - (this.heatmap.square_size/2), this.heatmap.square_size, this.heatmap.square_size);
       this.cx.fill();
@@ -187,6 +171,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   }
 
   update(): void {
+    let _this = this;
     let nodes = this.treeDescendants;
     let links: HierarchyPointNode<Taxon>[]  = this.treeDescendants.slice(1);
 
@@ -203,13 +188,29 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
 	return d.x;
       })
       .text(function(d){
+	if(d.data.tax_id == -1)
+	  return String(d.data.num_nodes);
 	return d.data["taxon_name"];
       })
-      .attr("size", this.nodeSize)
-      .attr("fill", this.colorScheme.fill)
+      .attr("size", function(d){
+	if(d.data.tax_id == -1)
+	  return _this.nodeSize * 2.5;
+	return _this.nodeSize;
+      })
+      .attr("fill", function(d){
+	if(d.data.tax_id == -1)
+	  return _this.colorScheme["compressed_fill"];
+	return _this.colorScheme.fill;
+      })
+      .attr("text_fill", function(d){
+	if(d.data.tax_id == -1)
+	  return _this.colorScheme["compressed_text_fill"];
+	return _this.colorScheme.fill;
+      })
       .attr("stroke_style", this.colorScheme["stroke_style"])
       .attr("text_fill", this.colorScheme["text_fill"])
-      .attr("line_width", this.strokeWidth);
+      .attr("line_width", this.strokeWidth)
+      .attr("_fill", null);
 
     let node_update = node_enter.merge(node);
 
@@ -221,9 +222,27 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
 	return d.x;
       })
       .text(function(d){
+	if(d.data.tax_id == -1)
+	  return String(d.data.num_nodes)
 	return d.data["taxon_name"];
-      });
-
+      })
+      .attr("text_fill", function(d){
+	if(d.data.tax_id == -1)
+	  return _this.colorScheme["compressed_text_fill"];
+	return _this.colorScheme.fill;
+      })
+      .attr("size", function(d){
+	if(d.data.tax_id == -1)
+	  return _this.nodeSize * 2;
+	return _this.nodeSize;
+      })
+      .attr("fill", function(d){
+	if(d.data.tax_id == -1)
+	  return _this.colorScheme["compressed_fill"];
+	return _this.colorScheme.fill;
+      })
+      .attr("_fill", null);
+    
     let node_exit = node.exit()
       .remove();
 
@@ -290,7 +309,6 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     this.scales["percentage"][1] = d3.scaleSequential(d3.interpolateBlues)
       .domain([Math.min.apply(Math, m2[0]), Math.max.apply(Math, m2[1])]);
 
-    let _this = this;
     let t = d3.timer(function(elapsed) {
       _this.renderCanvas();
       if (elapsed > duration + (2 * duration)) t.stop();
@@ -326,15 +344,19 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       _this.cx.beginPath();
       _this.cx.arc(x, y, parseFloat(_node.attr("size")), 0, 2 * Math.PI);
       _this.cx.fillStyle =  _node.attr("fill");
-      _this.cx.fill();
       _this.cx.lineWidth = parseFloat(_node.attr("line-width"));
       _this.cx.strokeStyle = _node.attr("stroke-style");
+      _this.cx.fill();
       _this.cx.stroke();
       _this.cx.closePath();
       _this.cx.beginPath();
       _this.cx.font = "18px Open Sans";
-      _this.cx.fillStyle = _node.attr("text-fill");
-      if(d.children!=null){
+      _this.cx.fillStyle = _node.attr("text_fill");
+      if(d.data.tax_id == -1){
+	_this.cx.textAlign = "center";
+	_this.cx.textBaseline = 'middle';
+	_this.cx.fillText(_node.text(), x, y);
+      } else if(d.children!=null){
 	_this.cx.textAlign = "center";
 	_this.cx.textBaseline = 'middle';
 	_this.cx.fillText(_node.text(), x, y + parseFloat(_node.attr("size")) + 5);

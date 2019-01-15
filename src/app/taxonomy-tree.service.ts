@@ -34,21 +34,132 @@ export class TaxonomyTreeService {
   getTree(): Observable<any> {
     return this.http.get<any>(this.reportUrl)
       .pipe(
-	tap(_ => this.jsonData = _),
+	tap(d => this.jsonData = d),
 	catchError(this.handleError('getTree', []))
       );
   }
 
-  getLayout(data: Taxon, height:number, width: number, offsetX: number, offsetY: number): HierarchyPointNode<Taxon>[] {
+  getLayout(data: Taxon, height:number, width: number, offsetX: number, offsetY: number, depth: number): HierarchyPointNode<Taxon>[] {
     let root = d3.hierarchy(data, function(d){return d.children;});
     let tree_layout = d3.cluster<Taxon>().size([height-offsetX*2, width-offsetY*2]);
     let tree = tree_layout(root);
     let nodes = tree.descendants();
     nodes.forEach(function(d){
-      d.y = (d.depth * width/3) + offsetX;
+      if(d.parent == null)
+	d.y = offsetX;
+      else if(d.data.tax_id == -1) // compressd nodes
+	d.y = d.parent.y + 20;
+      else
+	d.y = d.parent.y + depth;
       d.x += offsetY;
     });
     return nodes;
+  }
+
+  filterTaxonomyTree(d: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
+    let cond = [], keep_node: boolean = false, tmp, _this = this;
+    // Minimum number of reads
+    keep_node = d.taxon_reads.some(function(x){
+      return x >= minReads;
+    });
+    cond.push(keep_node);
+    // Maximum pvalue
+    keep_node = d.pvalue.some(function(x){
+      return x <= sigLevel;
+    });
+    cond.push(keep_node);
+    // Minimum odds ratio
+    keep_node = d.oddsratio.some(function(x){
+      return x >= minOddsRatio;
+    });
+    cond.push(keep_node);
+    keep_node = cond.every(function(x){
+      return x;
+    });
+    cond = [keep_node];
+    if(d.children != null){
+      for (var i = 0; i < d.children.length; i++) {
+	tmp = this.filterTaxonomyTree(d.children[i], minReads, sigLevel, minOddsRatio);
+	cond.push(tmp);
+	if(!tmp){
+	  d.children.splice(i, 1);
+	  i--;
+	}
+      }
+    }
+    keep_node = cond.some(function(x){
+      return x;
+    });
+    return keep_node;
+  }
+
+  filterBasedOnAnnotations(d: Taxon, key: string, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
+    let cond = [], keep_node: boolean = false, tmp, _this = this;
+    // Minimum number of reads
+    keep_node = d.taxon_reads.some(function(x){
+      return x >= minReads;
+    });
+    cond.push(keep_node);
+    // Maximum pvalue
+    keep_node = d.pvalue.some(function(x){
+      return x <= sigLevel;
+    });
+    cond.push(keep_node);
+    // Minimum odds ratio
+    keep_node = d.oddsratio.some(function(x){
+      return x >= minOddsRatio;
+    });
+    cond.push(keep_node);
+    keep_node = (d[key] == 1);
+    cond.push(keep_node);
+    keep_node = cond.every(function(x){
+      return x;
+    });
+    cond = [keep_node];
+    if(d.children != null){
+      for (var i = 0; i < d.children.length; i++) {
+	tmp = this.filterBasedOnAnnotations(d.children[i], key, minReads, sigLevel, minOddsRatio);
+	cond.push(tmp);
+	if(!tmp){
+	  d.children.splice(i, 1);
+	  i--;
+	}
+      }
+    }
+    keep_node = cond.some(function(x){
+      return x;
+    });
+    return keep_node;
+  }
+
+  compressNodesBasedOnAnnotation(d: Taxon, key: string): void {
+    if(d[key] == 0 && d.depth > 0){
+      d.taxon_name = "Compressed";
+      d.tax_id = -1;
+      d.num_nodes = 1;
+      while(!d.children.every(function(x){return (x[key] == 1);})){
+    	for(var i = 0; i < d.children.length;i++){
+    	  if(d.children[i][key] == 0){
+    	    if(d.children[i].children!=null)
+    	      d.children = d.children.concat(d.children[i].children);
+    	    d.children.splice(i, 1);
+    	    d.num_nodes += 1;
+    	    i--;
+    	  }
+    	}
+      }
+    }
+    for(var i = 0; i< d.children.length; i++){
+      this.compressNodesBasedOnAnnotation(d.children[i], key);
+    }
+  }
+
+  filterPathogenic(minReads: number, sigLevel: number, minOddsRatio: number): Taxon{
+    let data = _.cloneDeep(this.jsonData);
+    this.filterBasedOnAnnotations(data, "pathogenic", minReads, sigLevel, minOddsRatio);
+    this.compressNodesBasedOnAnnotation(data, "pathogenic");
+    console.log(data);
+    return data;
   }
 
   setViewPort(tax_id: number = 1): Taxon[] {

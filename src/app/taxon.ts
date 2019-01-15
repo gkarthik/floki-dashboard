@@ -22,4 +22,5 @@ export class Taxon {
   pathogenic: number;
   diseases: [];
   children: Taxon[];
+  num_nodes: number;
 }
