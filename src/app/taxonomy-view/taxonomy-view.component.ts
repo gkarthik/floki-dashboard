@@ -1,4 +1,5 @@
 import { Component, OnInit, AfterViewInit, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { NodeBarChartComponent } from '../node-bar-chart/node-bar-chart.component';
 
 import { TaxonomyTreeService } from '../taxonomy-tree.service';
 
@@ -15,19 +16,19 @@ import * as d3 from 'd3';
   templateUrl: './taxonomy-view.component.html',
   styleUrls: ['./taxonomy-view.component.css']
 })
-export class TaxonomyViewComponent implements AfterViewInit {
+export class TaxonomyViewComponent implements AfterViewInit, OnInit {
 
   @ViewChild('wrapper') private canvas: ElementRef;
 
-  private screenWidth;
-  private screenHeight;
+  private screenWidth = 100;
+  private screenHeight = 100;
 
   // Styles
   private nodeSize: number = 5;
   private strokeWidth: number = 2;
   private colorScheme: { [element: string]: string } =  {
     "fill": "#4682b4",
-    "hover_fill": "red",
+    "hover_fill": "#86C67C",
     "stroke_style": "#000000",
     "text_fill": "#000000",
     "link_stroke_style": "#000000"
@@ -51,16 +52,20 @@ export class TaxonomyViewComponent implements AfterViewInit {
   private canvasEl: HTMLCanvasElement;
 
   private taxonomyTree: Taxon = new Taxon();
+  private currentNode: Taxon = new Taxon();
   private treeDescendants: HierarchyPointNode<Taxon>[];
   private pathToRoot: Taxon[] = [];
-  private canvas_wrapper;
+  private canvasWrapper;
 
   constructor(
     private taxonomyTreeService: TaxonomyTreeService
   ) { }
 
+  ngOnInit(){
+    this.getScreenSize(); // On init since value passed to node-bar-chart component
+  }
+
   ngAfterViewInit(){
-    this.getScreenSize();
     this.setUpCanvas();
     this.taxonomyTreeService.getTree().subscribe(_ => this.drawCanvas(1));
   }
@@ -75,20 +80,19 @@ export class TaxonomyViewComponent implements AfterViewInit {
     let t: Taxon[] = this.taxonomyTreeService.setViewPort(tax_id);
     this.pathToRoot = t;
     this.taxonomyTree = t[t.length-1];
+    this.currentNode = t[t.length - 1];
     this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth/2, this.canvasOffset.x, this.canvasOffset.y);
-    console.log(this.taxonomyTree);
-    this.canvas_wrapper = d3.select("#wrapper");
+    this.canvasWrapper = d3.select("#wrapper");
     this.update();
   }
 
   onCanvasClick(event): void {
     let _y = event.clientX - 15;
-    let _x = event.clientY;
+    let _x = event.clientY + window.scrollY;
     let _this = this;
     d3.selectAll("custom-node")
       .each(function(d: HierarchyPointNode<Taxon>){
 	if(_this.checkWithinRadius([d.y, d.x], [_y, _x], _this.nodeSize + _this.strokeWidth)){
-	  console.log(d.data.tax_id);
 	  _this.drawCanvas(d.data.tax_id);
 	}
       })
@@ -96,15 +100,25 @@ export class TaxonomyViewComponent implements AfterViewInit {
 
   onCanvasHover(event): void {
     let _y = event.clientX - 15;
-    let _x = event.clientY;
+    let _x = event.clientY + window.scrollY;
     let _this = this;
+    console.log(event);
+    let hoverEvent: boolean = false;
     d3.selectAll("custom-node")
       .each(function(d: HierarchyPointNode<Taxon>){
 	if(_this.checkWithinRadius([d.y, d.x], [_y, _x], _this.nodeSize + _this.strokeWidth)){
-	  console.log(d.data.tax_id);
-	  _this.drawCanvas(d.data.tax_id);
+	  console.log(d.y, d.x);
+	  d3.select(this).attr("fill", _this.colorScheme["hover_fill"]);
+	  _this.currentNode = d.data;
+	  _this.canvasEl.style.cursor = "pointer";
+	  hoverEvent = true;
+	} else {
+	  d3.select(this).attr("fill", _this.colorScheme["fill"]);
 	}
-      })
+      });
+    if(!hoverEvent)
+      this.canvasEl.style.cursor = "auto";
+    this.renderCanvas();
   }
 
   checkWithinRadius(p1: [number, number], p2: [number, number], r: number): boolean {
@@ -137,7 +151,7 @@ export class TaxonomyViewComponent implements AfterViewInit {
     let links: HierarchyPointNode<Taxon>[]  = this.treeDescendants.slice(1);
 
     let duration = 300;
-    let node = this.canvas_wrapper.selectAll("custom-node").data(nodes);
+    let node = this.canvasWrapper.selectAll("custom-node").data(nodes);
 
     let node_enter = node.enter()
       .append("custom-node")
@@ -173,7 +187,7 @@ export class TaxonomyViewComponent implements AfterViewInit {
     let node_exit = node.exit()
       .remove();
 
-    let link = this.canvas_wrapper.selectAll("custom-link").data(links);
+    let link = this.canvasWrapper.selectAll("custom-link").data(links);
 
     let linkEnter = link.enter()
       .append("custom-link")
@@ -247,7 +261,7 @@ export class TaxonomyViewComponent implements AfterViewInit {
     let _this = this;
     let tx: number, ty:number, sx: number, sy:number;
     _this.cx.clearRect(0, 0, this.screenWidth/2, this.screenHeight);
-    this.canvas_wrapper.selectAll("custom-link").each(function(d){
+    this.canvasWrapper.selectAll("custom-link").each(function(d){
       let _link: Selection<any, any, any, any> = d3.select(this);
       _this.cx.beginPath();
       sx = parseFloat(_link.attr("sx"));
@@ -264,7 +278,7 @@ export class TaxonomyViewComponent implements AfterViewInit {
       _this.cx.closePath();
     });
 
-    this.canvas_wrapper.selectAll("custom-node").each(function(d){
+    this.canvasWrapper.selectAll("custom-node").each(function(d){
       let _node = d3.select(this), x: number, y:number;
       x = parseFloat(_node.attr("x"));
       y = parseFloat(_node.attr("y"));
@@ -295,7 +309,7 @@ export class TaxonomyViewComponent implements AfterViewInit {
 	_this.drawHeatmap(_node, d, "percentage");
       }
     });
-    // this.canvas_wrapper.selectAll("custom-node").each(function(d){
+    // this.canvasWrapper.selectAll("custom-node").each(function(d){
     //   var _node = d3.select(this);
     //   if(_node.attr("hover-status")=="active"){
     // 	draw_hover(d, ["percentage", "taxon_reads", "kmer_depth", "kmer_coverage"]);
@@ -308,11 +322,10 @@ export class TaxonomyViewComponent implements AfterViewInit {
     this.canvasEl = canvasEl;
     let dpr: number = window.devicePixelRatio || 1;
     let rect = canvasEl.getBoundingClientRect();
-    canvasEl.width = (this.screenWidth/2) * dpr;
-    canvasEl.height = (this.screenHeight) * dpr;
-    canvasEl.style.width = String(this.screenWidth/2)+"px";
+    canvasEl.width = (this.screenWidth/2 - 30) * dpr;
+    canvasEl.height = this.screenHeight * dpr;
+    // canvasEl.style.width = String(this.screenWidth/2 - 30)+"px";
     canvasEl.style.height = String(this.screenHeight) + "px";
-
     this.cx = canvasEl.getContext('2d');
     this.cx.scale(dpr, dpr);
   }

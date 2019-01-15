@@ -1,0 +1,107 @@
+import { Component, OnChanges, SimpleChange, SimpleChanges, HostListener, ViewChild, ElementRef, Input } from '@angular/core';
+
+import { Taxon } from '../taxon';
+
+import { ScaleLinear, ScaleBand } from 'd3-scale';
+
+import * as d3 from 'd3';
+
+@Component({
+  selector: 'app-node-bar-chart',
+  templateUrl: './node-bar-chart.component.html',
+  styleUrls: ['./node-bar-chart.component.css']
+})
+export class NodeBarChartComponent implements OnChanges {
+
+  @ViewChild('chartWrapper') private canvas: ElementRef;
+
+  private cx: CanvasRenderingContext2D;
+  private canvasEl: HTMLCanvasElement;
+
+  @Input() nodeData: Taxon;
+  @Input() key: string;
+  @Input() screenHeight: number;
+  @Input() screenWidth: number;
+
+  private offset: {[id:string]: number} = {
+    "x": 10,
+    "y": 10
+  };
+  private padding = 20;
+
+  constructor() { }
+
+  ngOnChanges(changes: SimpleChanges){
+    this.setUpCanvas();
+    this.drawChart();
+  }
+
+  drawChart(): void {
+    let _width: number = this.screenWidth/2 - 30 - (2 * this.offset.x);
+    let _height: number = this.screenHeight/6 - (2 * this.offset.y);
+    var _padding = this.padding;
+    let _data = this.nodeData;
+    console.log(_data);
+    console.log(this.key);
+    var x: ScaleBand<any> = d3.scaleBand()
+      .rangeRound([0, _width])
+      .padding(0.1);
+    let y: ScaleLinear<number, number> = d3.scaleLinear()
+      .rangeRound([0, _height]);
+    x.domain(_data["file"]);
+    let y_domain_elmns = _data[this.key].slice();
+    y_domain_elmns.push(_data["ctrl_"+this.key]); // Get ctrl value as well
+    y_domain_elmns.push(0);		    // Add zero
+    let y_domain = [Math.min.apply(Math, y_domain_elmns), Math.max.apply(Math, y_domain_elmns)];
+    if (y_domain[0] == y_domain[1]) {
+      y_domain[0] = y_domain[1] - 0.5; // If value 0 show zero.
+    }
+    y.domain(y_domain);
+
+    // x and y axis
+    this.cx.beginPath();
+    this.cx.lineWidth = 2;
+    this.cx.strokeStyle = "#000000";
+    this.cx.moveTo(this.offset.x, _height + this.offset.y);
+    this.cx.lineTo(this.offset.x + (x.padding() + x.bandwidth()) * (_data[this.key].length + 1), _height + this.offset.y);
+    this.cx.moveTo(this.offset.x, this.offset.y);
+    this.cx.lineTo(this.offset.x, this.offset.y + _height + 1);
+    this.cx.stroke();
+    this.cx.closePath();
+
+    // x ticks
+    this.cx.beginPath();
+    this.cx.fillStyle = "#000000";
+    this.cx.strokeStyle = "#000000";
+    x.domain().forEach(function(d) {
+      this.cx.moveTo(_x + barchart.padding + x(d) + x.bandwidth() / 2, _y + barchart.padding + barchart.height);
+      this.cx.lineTo(_x + barchart.padding + x(d) + x.bandwidth() / 2, _y + barchart.padding + barchart.height + 6);
+      this.cx.font="12px Open Sans";
+      this.cx.save();
+      this.cx.translate(_x + barchart.padding + x(d) + x.bandwidth() / 2 , _y + barchart.padding + barchart.height + 6);
+      this.cx.rotate(-Math.PI/2);
+      this.cx.translate( -1 * (_x + barchart.padding + x(d) + x.bandwidth() / 2) , -1 * (_y + barchart.padding + barchart.height + 6));
+      this.cx.textAlign = "right";
+      this.cx.textBaseline = "middle";
+      this.cx.fillText(d.split(".")[0], _x + barchart.padding + x(d) + x.bandwidth() / 2 , _y + barchart.padding + barchart.height + 6);
+      this.cx.restore();
+    });
+    this.cx.strokeStyle = "#000000";
+    this.cx.stroke();
+    
+  }
+
+  setUpCanvas(): void {
+    const canvasEl: HTMLCanvasElement = this.canvas.nativeElement;
+    this.canvasEl = canvasEl;
+    let dpr: number = window.devicePixelRatio || 1;
+    let rect = canvasEl.getBoundingClientRect();
+    canvasEl.width = (this.screenWidth/2 - 30) * dpr;
+    canvasEl.height = this.screenHeight/6 * dpr;
+    canvasEl.style.width = String(this.screenWidth/2 - 30)+"px";
+    canvasEl.style.height = String(this.screenHeight/6) + "px";
+    this.cx = canvasEl.getContext('2d');
+    this.cx.scale(dpr, dpr);
+  }
+
+}

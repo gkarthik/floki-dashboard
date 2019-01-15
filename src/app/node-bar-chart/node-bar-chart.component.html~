@@ -1,0 +1,1 @@
+<canvas #chartWrapper id="chart-wrapper"></canvas>

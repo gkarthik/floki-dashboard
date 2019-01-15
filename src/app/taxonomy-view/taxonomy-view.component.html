@@ -1,6 +1,6 @@
 <div class="row">
   <div class="col">
-    <canvas #wrapper id="wrapper" (click)="onCanvasClick($event)" (on-mouseover)="onCanvasHover($event)">
+    <canvas #wrapper id="wrapper" (click)="onCanvasClick($event)" (mousemove)="onCanvasHover($event)">
     </canvas>
   </div>
   <div class="col">
@@ -9,5 +9,10 @@
 	<li *ngFor="let t of pathToRoot" (click)="drawCanvas(t.tax_id)" class="breadcrumb-item"><a href="#">{{t.taxon_name}}</a></li>
       </ol>
     </nav>
+    <h3><span class="badge badge-pill badge-primary">{{currentNode.taxon_name}}</span></h3>
+    <app-node-bar-chart [screenHeight]="screenHeight" [screenWidth]="screenWidth" [nodeData]="currentNode" key="percentage"></app-node-bar-chart>
+    <app-node-bar-chart [screenHeight]="screenHeight" [screenWidth]="screenWidth" [nodeData]="currentNode" key="taxon_reads"></app-node-bar-chart>
+    <app-node-bar-chart [screenHeight]="screenHeight" [screenWidth]="screenWidth" [nodeData]="currentNode" key="kmer_coverage"></app-node-bar-chart>
+    <app-node-bar-chart [screenHeight]="screenHeight" [screenWidth]="screenWidth" [nodeData]="currentNode" key="kmer_depth"></app-node-bar-chart>
   </div>
 </div>
