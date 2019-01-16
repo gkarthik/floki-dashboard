@@ -7,12 +7,14 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { TaxonomyViewComponent } from './taxonomy-view/taxonomy-view.component';
 import { NodeBarChartComponent } from './node-bar-chart/node-bar-chart.component';
+import { AnnotationComponent } from './annotation/annotation.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     TaxonomyViewComponent,
-    NodeBarChartComponent
+    NodeBarChartComponent,
+    AnnotationComponent
   ],
   imports: [
     HttpClientModule,
