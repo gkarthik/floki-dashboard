@@ -4,7 +4,7 @@
 <div class="row">
   <div *ngFor="let sample of arData">
     <h2 class="col-md-12">{{sample["sample"]}}</h2>
-    <div *ngFor="let seq of sample['data']" class="col-md-12 shadow-sm p-3 mb-5 bg-white rounded">
+    <div *ngFor="let seq of sample['data']" class="row shadow-sm p-3 mb-5 bg-white rounded">
       <ul class="list-group col-md-2">
   	<li class="list-group-item"><div class="bg-primary p-3 mb-2">Coverage</div> {{seq["coverage"] * 100}} %</li>
   	<li class="list-group-item"><div class="bg-primary p-3 mb-2">Per base depth</div> {{seq["avg_depth_per_base"]}}</li>
@@ -14,18 +14,17 @@
 	<div>
       	  <h3>{{model["ARO_name"]}}</h3>
       	  <p>{{model["ARO_description"]}}</p>
-      	  <span class="text-primary">Species</span>
       	  <span *ngFor="let m of model['model_sequences']['sequence'] | keyvalue" class="badge badge-primary">
       	    {{m.value["NCBI_taxonomy"]["NCBI_taxonomy_name"]}}
       	  </span>
       	</div>
       	<span *ngFor="let category of model['ARO_category'] | keyvalue" class="float-left">
-      	  <span class="animate-switch-container" [ngSwitch]="category.value['category_aro_class_name']">
-      	    <span style="background:#28a745;" class="animate-switch badge badge-danger float-left" *ngSwitchCase="Resistance Mechanism">{{category.value["category_aro_name"]}}</span>
-      	    <span style= "background:#dc3545;" class="animate-switch badge badge-success float-left" *ngSwitchCase="Antibiotic">{{category.value["category_aro_name"]}}</span>
-      	    <span style= "background:#007bff;" class="animate-switch badge badge-success float-left" *ngSwitchCase="Drug Class">{{category.value["category_aro_name"]}}</span>
-      	    <span class="animate-switch badge badge-info float-left" *ngSwitchDefault>{{category.value["category_aro_name"]}}</span>
-      	  </span>
+      	  <div [ngSwitch]="category.value['category_aro_class_name']">
+      	    <span class="badge badge-danger" *ngSwitchCase="'Resistance Mechanism'">{{category.value["category_aro_name"]}}</span>
+      	    <span class="badge badge-success" *ngSwitchCase="'Antibiotic'">{{category.value["category_aro_name"]}}</span>
+      	    <span class="badge badge-success" *ngSwitchCase="'Drug Class'">{{category.value["category_aro_name"]}}</span>
+      	    <span class="badge badge-info" *ngSwitchDefault>{{category.value["category_aro_name"]}}</span>
+      	  </div>
       	</span>
       </div>
       <hr>
