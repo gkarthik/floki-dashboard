@@ -89,7 +89,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     this.taxonomyTree = t[t.length-1];
     this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
     this.currentNode = this.taxonomyTree;
-    this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth/2, this.canvasOffset.x, this.canvasOffset.y, this.screenWidth/8);
+    this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth * (2/3), this.canvasOffset.x, this.canvasOffset.y, this.screenWidth * (1/6));
     this.update();
   }
 
@@ -98,7 +98,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
     this.pathToRoot = [this.taxonomyTree];
     this.currentNode = this.taxonomyTree;
-    this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth/2, this.canvasOffset.x, this.canvasOffset.y, this.screenWidth/16);
+    this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth *(2/3), this.canvasOffset.x, this.canvasOffset.y, this.screenWidth * (1/12));
     this.update();
   }
 
@@ -318,7 +318,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   renderCanvas(): void {
     let _this = this;
     let tx: number, ty:number, sx: number, sy:number;
-    this.cx.clearRect(0, 0, this.screenWidth/2, this.screenHeight);
+    this.cx.clearRect(0, 0, this.screenWidth *(2/3), this.screenHeight);
     this.canvasWrapper.selectAll("custom-link").each(function(d){
       let _link: Selection<any, any, any, any> = d3.select(this);
       _this.cx.beginPath();
@@ -367,7 +367,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       }
       _this.cx.fill();
       _this.cx.closePath();
-      if(d.depth > 0){
+      if(d.depth > 0 && d.data.tax_id != -1){
 	_this.drawHeatmap(_node, d, "percentage");
       }
     });
@@ -384,7 +384,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     this.canvasEl = canvasEl;
     let dpr: number = window.devicePixelRatio || 1;
     let rect = canvasEl.getBoundingClientRect();
-    canvasEl.width = (this.screenWidth/2 - 30) * dpr;
+    canvasEl.width = (this.screenWidth * (2/3) - 30) * dpr;
     canvasEl.height = this.screenHeight * dpr;
     // canvasEl.style.width = String(this.screenWidth/2 - 30)+"px";
     canvasEl.style.height = String(this.screenHeight) + "px";

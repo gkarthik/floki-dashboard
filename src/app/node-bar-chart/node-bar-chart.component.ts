@@ -48,9 +48,9 @@ export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
   }
 
   drawChart(): void {
-    this.cx.clearRect(0, 0, this.screenWidth/2, this.screenHeight/4);
+    this.cx.clearRect(0, 0, this.screenWidth/3, this.screenHeight/4);
 
-    let _width: number = this.screenWidth/2 - 30 - (2 * this.offset.x);
+    let _width: number = this.screenWidth/3 - 30 - (2 * this.offset.x);
     let _height: number = this.screenHeight/4 - (2 * this.offset.y) - 50;
     var _padding = this.padding;
     let _data = this.nodeData;

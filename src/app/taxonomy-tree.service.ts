@@ -48,7 +48,7 @@ export class TaxonomyTreeService {
       if(d.parent == null)
 	d.y = offsetX;
       else if(d.data.tax_id == -1) // compressd nodes
-	d.y = d.parent.y + 20;
+	d.y = d.parent.y + 40;
       else
 	d.y = d.parent.y + depth;
       d.x += offsetY;
@@ -133,7 +133,7 @@ export class TaxonomyTreeService {
   }
 
   compressNodesBasedOnAnnotation(d: Taxon, key: string): void {
-    if(d[key] == 0 && d.depth > 0){
+    if(d[key] == 0 && d.depth > 1){
       d.taxon_name = "Compressed";
       d.tax_id = -1;
       d.num_nodes = 1;
