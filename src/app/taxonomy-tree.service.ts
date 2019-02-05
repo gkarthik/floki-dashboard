@@ -30,7 +30,7 @@ export class TaxonomyTreeService {
       return of(result as T);
     };
   }
-  
+
   getTree(): Observable<any> {
     return this.http.get<any>(this.reportUrl)
       .pipe(
@@ -154,11 +154,79 @@ export class TaxonomyTreeService {
     }
   }
 
+  filterBasedOnSearch(d: Taxon, key: string, term: string, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
+    let cond = [], keep_node: boolean = false, tmp, _this = this;
+    // Minimum number of reads
+    keep_node = d.taxon_reads.some(function(x){
+      return x >= minReads;
+    });
+    cond.push(keep_node);
+    // Maximum pvalue
+    keep_node = d.pvalue.some(function(x){
+      return x <= sigLevel;
+    });
+    cond.push(keep_node);
+    // Minimum odds ratio
+    keep_node = d.oddsratio.some(function(x){
+      return x >= minOddsRatio;
+    });
+    cond.push(keep_node);
+    keep_node = (d[key].includes(term));
+    cond.push(keep_node);
+    keep_node = cond.every(function(x){
+      return x;
+    });
+    cond = [keep_node];
+    if(d.children != null){
+      for (var i = 0; i < d.children.length; i++) {
+  tmp = this.filterBasedOnSearch(d.children[i], key, term, minReads, sigLevel, minOddsRatio);
+  cond.push(tmp);
+  if(!tmp){
+    d.children.splice(i, 1);
+    i--;
+  }
+      }
+    }
+    keep_node = cond.some(function(x){
+      return x;
+    });
+    return keep_node;
+  }
+
+  compressNodesBasedOnSearch(d: Taxon, key: string, term: string): void {
+    if(d[key].includes(term) == false && d.depth > 1){
+      d.taxon_name = "Compressed";
+      d.tax_id = -1;
+      d.num_nodes = 1;
+      while(d.children.every(function(x){return (d[key].includes(term) == false);})){
+      for(var i = 0; i < d.children.length;i++){
+        if(d.children[i][key].includes(term) == false){
+          if(d.children[i].children!=null)
+            d.children = d.children.concat(d.children[i].children);
+          d.children.splice(i, 1);
+          d.num_nodes += 1;
+          i--;
+        }
+      }
+      }
+    }
+    for(var i = 0; i< d.children.length; i++){
+      this.compressNodesBasedOnSearch(d.children[i], key, term);
+    }
+  }
+
   filterPathogenic(minReads: number, sigLevel: number, minOddsRatio: number): Taxon{
     let data = _.cloneDeep(this.jsonData);
     this.filterBasedOnAnnotations(data, "pathogenic", minReads, sigLevel, minOddsRatio);
     this.compressNodesBasedOnAnnotation(data, "pathogenic");
     console.log(data);
+    return data;
+  }
+
+  filterSearch(minReads: number, sigLevel: number, minOddsRatio: number): Taxon{
+    let data = _.cloneDeep(this.jsonData);
+    this.filterBasedOnSearch(data, "taxon_name", "bac", minReads, sigLevel, minOddsRatio);
+    this.compressNodesBasedOnSearch(data, "taxon_name", "bac");
     return data;
   }
 

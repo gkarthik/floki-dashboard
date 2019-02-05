@@ -22,7 +22,7 @@
 	<div class="form-group col-md-4">
 	  <label for="sigLevel">Significance Level</label>
 	  <input type="text" class="form-control" id="sigLevel" placeholder="Significance Level" [(ngModel)]="sigLevel" name="sigLevel">
-	</div>	
+	</div>
       </div>
       <div class="form-row">
 	<div class="col-md-6">
@@ -32,6 +32,12 @@
 	  <button class="btn btn-primary mb-2" (click)="showPathogenic()">Show Pathogenic</button>
 	</div>
       </div>
+    <div class="form-row">
+      <div class="col-md-4">
+        <button class="btn btn-primary mb-2" (click)="showSearch()">Search</button>
+        <!-- <input type="text" class="form-control" id="sigLevel" placeholder="Search" [(ngModel)]="searchbox" name="searchbox"> -->
+      </div>
+    </div>
     </form>
     <h3><span class="badge badge-light">{{currentNode.taxon_name}}</span></h3>
     <app-node-bar-chart [screenHeight]="screenHeight" [screenWidth]="screenWidth" [nodeData]="currentNode" key="percentage"></app-node-bar-chart>

@@ -48,11 +48,11 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     "x": 50,
     "y": 0
   }
-  
+
   private heatmap: {[element: string]: number} = {
     "square_size": 10
   }
-  
+
 
   private cx: CanvasRenderingContext2D;
   private canvasEl: HTMLCanvasElement;
@@ -90,6 +90,15 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
     this.currentNode = this.taxonomyTree;
     this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth * (2/3), this.canvasOffset.x, this.canvasOffset.y, this.screenWidth * (1/6));
+    this.update();
+  }
+
+  showSearch(): void {
+    this.taxonomyTree = this.taxonomyTreeService.filterSearch(this.minReads, this.sigLevel, this.minOddsRatio);
+    this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
+    this.pathToRoot = [this.taxonomyTree];
+    this.currentNode = this.taxonomyTree;
+    this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth *(2/3), this.canvasOffset.x, this.canvasOffset.y, this.screenWidth * (1/12));
     this.update();
   }
 
@@ -242,7 +251,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
 	return _this.colorScheme.fill;
       })
       .attr("_fill", null);
-    
+
     let node_exit = node.exit()
       .remove();
 
