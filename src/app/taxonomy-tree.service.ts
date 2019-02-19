@@ -194,21 +194,22 @@ export class TaxonomyTreeService {
   }
 
   compressNodesBasedOnSearch(d: Taxon, key: string, term: string): void {
-    if(d[key].includes(term) == false && d.depth > 1){
+    console.log(!d[key].includes(term) && d.depth > 1)
+    if(!d[key].includes(term) && d.depth > 1){
       d.taxon_name = "Compressed";
       d.tax_id = -1;
       d.num_nodes = 1;
-      while(d.children.every(function(x){return (d[key].includes(term) == false);})){
-      for(var i = 0; i < d.children.length;i++){
-        if(d.children[i][key].includes(term) == false){
-          if(d.children[i].children!=null)
-            d.children = d.children.concat(d.children[i].children);
-          d.children.splice(i, 1);
-          d.num_nodes += 1;
-          i--;
-        }
-      }
-      }
+      // while(!d.children.every(function(x){return (x[key].includes(term) == false);})){
+      // for(var i = 0; i < d.children.length;i++){
+      //   if(!d.children[i][key].includes(term)){
+      //     if(d.children[i].children!=null)
+      //       d.children = d.children.concat(d.children[i].children);
+      //     d.children.splice(i, 1);
+      //     d.num_nodes += 1;
+      //     i--;
+      //   }
+      // }
+      // }
     }
     for(var i = 0; i< d.children.length; i++){
       this.compressNodesBasedOnSearch(d.children[i], key, term);
@@ -223,10 +224,10 @@ export class TaxonomyTreeService {
     return data;
   }
 
-  filterSearch(minReads: number, sigLevel: number, minOddsRatio: number): Taxon{
+  filterSearch(searchterm: string, minReads: number, sigLevel: number, minOddsRatio: number): Taxon{
     let data = _.cloneDeep(this.jsonData);
-    this.filterBasedOnSearch(data, "taxon_name", "bac", minReads, sigLevel, minOddsRatio);
-    this.compressNodesBasedOnSearch(data, "taxon_name", "bac");
+    this.filterBasedOnSearch(data, "taxon_name", searchterm, minReads, sigLevel, minOddsRatio);
+    this.compressNodesBasedOnSearch(data, "taxon_name", searchterm);
     return data;
   }
 

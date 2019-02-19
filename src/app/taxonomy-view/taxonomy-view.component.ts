@@ -94,7 +94,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   }
 
   showSearch(): void {
-    this.taxonomyTree = this.taxonomyTreeService.filterSearch(this.minReads, this.sigLevel, this.minOddsRatio);
+    this.taxonomyTree = this.taxonomyTreeService.filterSearch(this.searchterm, this.minReads, this.sigLevel, this.minOddsRatio);
     this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
     this.pathToRoot = [this.taxonomyTree];
     this.currentNode = this.taxonomyTree;
