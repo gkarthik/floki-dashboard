@@ -30,13 +30,17 @@
 	</div>
 	<div class="col-md-6">
 	  <button class="btn btn-primary mb-2" (click)="showPathogenic()">Show Pathogenic</button>
-	</div>
+  </div>
       </div>
     <div class="form-row">
       <div class="col-md-4">
-        <button class="btn btn-primary mb-2" (click)="showSearch()">Search</button>
-        <label for="minReads">Minimum read count</label>
         <input type="text" class="form-control" id="searchterm" placeholder="Search" [(ngModel)]="searchterm" name="searchbox">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary mb-2" (click)="showSearch()">Search</button>
+      </div>
+      <div class="col-md-6">
+        <input type='checkbox' id="pathogenic"  name="pathogenic" [(ngModel)]="pathogenic"> Only Search Pathogenic
       </div>
     </div>
     </form>

@@ -28,6 +28,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   private minOddsRatio: number = 1;
 
   private searchterm: string;
+  private pathogenic: boolean = false;
 
   // Styles
   private nodeSize: number = 5;
@@ -96,7 +97,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   }
 
   showSearch(): void {
-    this.taxonomyTree = this.taxonomyTreeService.filterSearch(this.searchterm, this.minReads, this.sigLevel, this.minOddsRatio);
+    this.taxonomyTree = this.taxonomyTreeService.filterSearch(this.pathogenic, this.searchterm, this.minReads, this.sigLevel, this.minOddsRatio);
     this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
     this.pathToRoot = [this.taxonomyTree];
     this.currentNode = this.taxonomyTree;
