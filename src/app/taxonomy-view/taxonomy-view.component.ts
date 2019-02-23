@@ -27,6 +27,8 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   private sigLevel: number = 0.05;
   private minOddsRatio: number = 1;
 
+  private searchterm: string;
+
   // Styles
   private nodeSize: number = 5;
   private strokeWidth: number = 2;
