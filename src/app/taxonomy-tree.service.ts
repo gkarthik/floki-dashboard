@@ -171,7 +171,14 @@ export class TaxonomyTreeService {
       return x >= minOddsRatio;
     });
     cond.push(keep_node);
-    keep_node = d[key].toLowerCase().includes(term);
+    var termi = term.toString().split("or")
+    // termi = termi
+    keep_node = false
+    for (var i = 0; i < termi.length; i++) {
+      if(d[key].toLowerCase().includes(termi[i].trim()) && d.depth > 1){
+        keep_node = true
+      }
+    }
     cond.push(keep_node);
     keep_node = cond.every(function(x) {
       return x;
@@ -217,6 +224,41 @@ export class TaxonomyTreeService {
     }
   }
 
+  compressNodesBasedOnSearch(d: Taxon, key: string, term: string): void {
+    var termi = term.toString().split("or")
+    var flag = false
+    console.log()
+    for (var i = 0; i < termi.length; i++) {
+      if(d[key].toLowerCase().includes(termi[i].trim()) && d.depth > 1){
+        flag = true;
+        console.log(d[key]);
+      }
+    }
+    if (flag==false) {
+      for (var i = 0; i < termi.length; i++) {
+        d.taxon_name = "Compressed";
+        d.tax_id = -1;
+        d.num_nodes = 1;
+        console.log(d.children.length);
+        while (!d.children.every(function(x) { return x[key].toLowerCase().includes(termi[i].trim()); })) {
+          for (var y = 0; y < d.children.length; y++) {
+            if (!d.children[y][key].toLowerCase().includes(termi[i].trim())) {
+              if (d.children[y].children != null) {
+                d.children = d.children.concat(d.children[y].children);
+              }
+              d.children.splice(y, 1);
+              d.num_nodes += 1;
+              y--;
+            }
+          }
+        }
+    }
+    }
+    for (var z = 0; z < d.children.length; z++) {
+      this.compressNodesBasedOnSearch(d.children[z], key, term);
+    }
+  }
+
   filterPathogenic(minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
     let data = _.cloneDeep(this.jsonData);
     this.filterBasedOnAnnotations(data, "pathogenic", minReads, sigLevel, minOddsRatio);
@@ -233,7 +275,7 @@ export class TaxonomyTreeService {
       if (searchterm.length > 3) {
         searchterm = searchterm.toLowerCase();
         this.filterBasedOnSearch(data, "taxon_name", searchterm, minReads, sigLevel, minOddsRatio);
-        this.compressNodesBasedOnSearch(data, "taxon_name", searchterm);
+        // this.compressNodesBasedOnSearch(data, "taxon_name", searchterm);
       }
     }
     return data;
