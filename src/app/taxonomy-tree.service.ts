@@ -199,60 +199,61 @@ export class TaxonomyTreeService {
     });
     return keep_node;
   }
+  //
+  // compressNodesBasedOnSearch(d: Taxon, key: string, term: string): void {
+  //   if (!d[key].toLowerCase().includes(term) && d.depth > 1) {
+  //     d.taxon_name = "Compressed";
+  //     d.tax_id = -1;
+  //     d.num_nodes = 1;
+  //     console.log(d.children.length);
+  //     while (!d.children.every(function(x) { return x[key].toLowerCase().includes(term); })) {
+  //       for (var i = 0; i < d.children.length; i++) {
+  //         if (!d.children[i][key].toLowerCase().includes(term)) {
+  //           if (d.children[i].children != null) {
+  //             d.children = d.children.concat(d.children[i].children);
+  //           }
+  //           d.children.splice(i, 1);
+  //           d.num_nodes += 1;
+  //           i--;
+  //         }
+  //       }
+  //     }
+  //   }
+  //   for (var i = 0; i < d.children.length; i++) {
+  //     this.compressNodesBasedOnSearch(d.children[i], key, term);
+  //   }
+  // }
 
   compressNodesBasedOnSearch(d: Taxon, key: string, term: string): void {
-    if (!d[key].toLowerCase().includes(term) && d.depth > 1) {
+    var termi = term.toLowerCase().toString().split("or")
+    var flag = false
+
+    for (var i = 0; i < termi.length; i++) {
+      if(d[key].toLowerCase().includes(termi[i].trim())){
+        flag = true;
+      }
+    }
+    if (flag==false && d.depth > 1) {
+      console.log(d[key])
+      console.log(termi)
+      console.log(!d.children.every(r=> termi.includes(r[key].toLowerCase())));
       d.taxon_name = "Compressed";
       d.tax_id = -1;
       d.num_nodes = 1;
-      console.log(d.children.length);
-      while (!d.children.every(function(x) { return x[key].toLowerCase().includes(term); })) {
-        for (var i = 0; i < d.children.length; i++) {
-          if (!d.children[i][key].toLowerCase().includes(term)) {
-            if (d.children[i].children != null) {
-              d.children = d.children.concat(d.children[i].children);
+      console.log(d.children)
+      console.log(!d.children.every(r=> termi.includes(r[key].toLowerCase())))
+      while (!d.children.every(r=> termi.includes(r[key].toLowerCase()))) {
+        for (var y = 0; y < d.children.length; y++) {
+          if (!termi.includes(d.children[y][key].toLowerCase())) {
+            if (d.children[y].children != null) {
+              d.children = d.children.concat(d.children[y].children);
             }
-            d.children.splice(i, 1);
+            d.children.splice(y, 1);
             d.num_nodes += 1;
-            i--;
+            y--;
           }
         }
       }
-    }
-    for (var i = 0; i < d.children.length; i++) {
-      this.compressNodesBasedOnSearch(d.children[i], key, term);
-    }
-  }
-
-  compressNodesBasedOnSearch(d: Taxon, key: string, term: string): void {
-    var termi = term.toString().split("or")
-    var flag = false
-    console.log()
-    for (var i = 0; i < termi.length; i++) {
-      if(d[key].toLowerCase().includes(termi[i].trim()) && d.depth > 1){
-        flag = true;
-        console.log(d[key]);
-      }
-    }
-    if (flag==false) {
-      for (var i = 0; i < termi.length; i++) {
-        d.taxon_name = "Compressed";
-        d.tax_id = -1;
-        d.num_nodes = 1;
-        console.log(d.children.length);
-        while (!d.children.every(function(x) { return x[key].toLowerCase().includes(termi[i].trim()); })) {
-          for (var y = 0; y < d.children.length; y++) {
-            if (!d.children[y][key].toLowerCase().includes(termi[i].trim())) {
-              if (d.children[y].children != null) {
-                d.children = d.children.concat(d.children[y].children);
-              }
-              d.children.splice(y, 1);
-              d.num_nodes += 1;
-              y--;
-            }
-          }
-        }
-    }
     }
     for (var z = 0; z < d.children.length; z++) {
       this.compressNodesBasedOnSearch(d.children[z], key, term);
@@ -275,7 +276,7 @@ export class TaxonomyTreeService {
       if (searchterm.length > 3) {
         searchterm = searchterm.toLowerCase();
         this.filterBasedOnSearch(data, "taxon_name", searchterm, minReads, sigLevel, minOddsRatio);
-        // this.compressNodesBasedOnSearch(data, "taxon_name", searchterm);
+        this.compressNodesBasedOnSearch(data, "taxon_name", searchterm);
       }
     }
     return data;
