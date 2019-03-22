@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, OnChanges, SimpleChange, SimpleChanges, HostListener, ViewChild, ElementRef, Input } from '@angular/core';
+import { Component, OnInit, ViewChild, Input, ElementRef, OnChanges, AfterViewInit, SimpleChanges } from '@angular/core';
 
 import { Taxon } from '../taxon';
 
@@ -8,23 +8,22 @@ import * as d3 from 'd3';
 import * as _ from "lodash";
 
 @Component({
-  selector: 'app-node-bar-chart',
-  templateUrl: './node-bar-chart.component.html',
-  styleUrls: ['./node-bar-chart.component.css']
+  selector: 'app-score-distribution-chart',
+  templateUrl: './score-distribution-chart.component.html',
+  styleUrls: ['./score-distribution-chart.component.css']
 })
-export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
+export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit, OnInit {
 
   @ViewChild('chartWrapper') private canvas: ElementRef;
 
   private cx: CanvasRenderingContext2D;
   private canvasEl: HTMLCanvasElement;
 
-  @Input() nodeData: Taxon;
-  @Input() key: string;
-  @Input() screenHeight: number;
-  @Input() screenWidth: number;
-
+  private ctrl_distribution: number[] = [];
+  private distribution: number[][] = [];
+  private bins: number[] = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
   private keyTitle: string = "";
+
 
   private offset: { [id: string]: number } = {
     "x": 50,
@@ -32,19 +31,35 @@ export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
   };
   private padding = 20;
 
-  constructor() { }
 
-  ngOnInit() {
-    this.keyTitle = this.key.replace(/_/g, " ");
-  }
+  @Input() nodeData: Taxon;
+  @Input() key: string;
+  @Input() screenHeight: number;
+  @Input() screenWidth: number;
+
+  constructor() { }
 
   ngAfterViewInit() {
     this.setUpCanvas();
   }
 
+  ngOnInit() {
+    this.keyTitle = this.key.replace(/_/g, " ");
+  }
+
+
   ngOnChanges(changes: SimpleChanges) {
-    if (!_.isEmpty(this.nodeData))
+    if (!_.isEmpty(this.nodeData)) {
+      console.log(this.nodeData[this.key]);
+      this.distribution = [];
+      if (this.nodeData["ctr_l" + this.key] != "")
+        this.ctrl_distribution = this.nodeData["ctrl_" + this.key].split(",").map(x => parseInt(x))
+      for (var i = 0; i < this.nodeData[this.key].length; i++) {
+        if (this.nodeData[this.key][i] != "")
+          this.distribution.push(this.nodeData[this.key][i].split(",").map(x => parseInt(x)));
+      }
       this.drawChart();
+    }
   }
 
   drawChart(): void {
@@ -60,22 +75,23 @@ export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
       .padding(0.1);
     let y: ScaleLinear<number, number> = d3.scaleLinear()
       .rangeRound([0, _height]);
-    x.domain(_data["file"]);
-    let y_domain_elmns = _data[this.key].slice();
-    y_domain_elmns.push(_data["ctrl_" + this.key]); // Get ctrl value as well
-    y_domain_elmns.push(0);		    // Add zero
+    x.domain(this.bins);
+    let y_domain_elmns = [].concat.apply([], this.distribution);
+    y_domain_elmns.push.apply(y_domain_elmns, this.ctrl_distribution); // Get ctrl value as well
+    y_domain_elmns.push(0); // Add zero
     let y_domain = [Math.min.apply(Math, y_domain_elmns), Math.max.apply(Math, y_domain_elmns)];
     if (y_domain[0] == y_domain[1]) {
       y_domain[0] = y_domain[1] - 0.5; // If value 0 show zero.
     }
     y.domain(y_domain);
 
+
     // x and y axis
     this.cx.beginPath();
     this.cx.lineWidth = 2;
     this.cx.strokeStyle = "#000000";
     this.cx.moveTo(this.offset.x, _height + this.offset.y);
-    this.cx.lineTo(this.offset.x + (x.padding() + x.bandwidth()) * (_data[this.key].length + 1), _height + this.offset.y);
+    this.cx.lineTo(this.offset.x + (x.padding() + x.bandwidth()) * (this.bins.length + 1), _height + this.offset.y);
     this.cx.moveTo(this.offset.x, this.offset.y);
     this.cx.lineTo(this.offset.x, this.offset.y + _height + 1);
     this.cx.stroke();
@@ -96,11 +112,12 @@ export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
       _this.cx.translate(-1 * (_this.offset.x + x(d) + x.bandwidth() / 2), -1 * (_this.offset.y + _height + 6));
       _this.cx.textAlign = "right";
       _this.cx.textBaseline = "middle";
-      _this.cx.fillText(d.split(".")[0], _this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 6);
+      _this.cx.fillText(d, _this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 6);
       _this.cx.restore();
     });
     _this.cx.strokeStyle = "#000000";
     _this.cx.stroke();
+
 
     // y ticks
     y.ticks(10).forEach(function(d) {
@@ -118,16 +135,20 @@ export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
     this.cx.strokeStyle = "#000000";
     this.cx.stroke();
 
-    for (var i = 0; i < _data[this.key].length; i++) {
-      _this.cx.fillStyle = "steelblue";
-      _this.cx.rect(_this.offset.x + x(_data["file"][i]), _this.offset.y + (_height - y(_data[_this.key][i])), x.bandwidth(), y(_data[_this.key][i]));
+    for (var i = 0; i < this.distribution.length; i++) {
+      for (var j = 0; j < this.distribution[i].length; j++) {
+        _this.cx.fillStyle = "rgba(70,130,180,0.1)";
+        _this.cx.rect(_this.offset.x + x(j * 0.1) + x.bandwidth() / 2, _this.offset.y + (_height - y(this.distribution[i][j])), x.bandwidth(), y(this.distribution[i][j]));
+        _this.cx.fill();
+      }
+    }
+
+    for (var j = 0; j < this.ctrl_distribution.length; j++) {
+      _this.cx.fillStyle = "rgba(205, 92, 92, 0.1)";
+      _this.cx.rect(_this.offset.x + x(j * 0.1) + x.bandwidth() / 2, _this.offset.y + (_height - y(this.ctrl_distribution[j])), x.bandwidth(), y(this.ctrl_distribution[j]));
       _this.cx.fill();
     }
-    this.cx.beginPath();
-    this.cx.strokeStyle = "#FF0000";
-    this.cx.moveTo(this.offset.x, this.offset.y + (_height - y(_data["ctrl_" + this.key])));
-    this.cx.lineTo(this.offset.x + _width, this.offset.y + (_height - y(_data["ctrl_" + this.key])));
-    this.cx.stroke();
+
   }
 
   setUpCanvas(): void {
