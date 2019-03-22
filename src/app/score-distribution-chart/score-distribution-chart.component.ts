@@ -2,7 +2,8 @@ import { Component, OnInit, ViewChild, Input, ElementRef, OnChanges, AfterViewIn
 
 import { Taxon } from '../taxon';
 
-import { ScaleLinear, ScaleBand } from 'd3-scale';
+import { ScaleLinear, ScaleBand, ScaleOrdinal } from 'd3-scale';
+import { Color } from 'd3-color';
 
 import * as d3 from 'd3';
 import * as _ from "lodash";
@@ -130,24 +131,35 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
       } else {
         _this.cx.fillText(d.toExponential(1), _this.offset.x - 6, _this.offset.y + _height - y(d) + 0.5);
       }
-
     });
     this.cx.strokeStyle = "#000000";
     this.cx.stroke();
 
+    let sampleColor = d3.scaleOrdinal(d3.schemeCategory10).domain(_data["file"]);
+    let c;
+
     for (var i = 0; i < this.distribution.length; i++) {
+      c = d3.color(sampleColor(_data["file"][i]));
+      c.opacity = 0.01;
       for (var j = 0; j < this.distribution[i].length; j++) {
-        _this.cx.fillStyle = "rgba(70,130,180,0.1)";
+        _this.cx.fillStyle = c + "";
         _this.cx.rect(_this.offset.x + x(j * 0.1) + x.bandwidth() / 2, _this.offset.y + (_height - y(this.distribution[i][j])), x.bandwidth(), y(this.distribution[i][j]));
         _this.cx.fill();
       }
     }
+    this.cx.closePath();
+
+    this.cx.beginPath();
 
     for (var j = 0; j < this.ctrl_distribution.length; j++) {
-      _this.cx.fillStyle = "rgba(205, 92, 92, 0.1)";
-      _this.cx.rect(_this.offset.x + x(j * 0.1) + x.bandwidth() / 2, _this.offset.y + (_height - y(this.ctrl_distribution[j])), x.bandwidth(), y(this.ctrl_distribution[j]));
-      _this.cx.fill();
+      _this.cx.moveTo(_this.offset.x + x(j * 0.1) + x.bandwidth() / 2, _this.offset.y + (_height - y(this.ctrl_distribution[j])));
+      _this.cx.lineTo(_this.offset.x + x(j * 0.1) + x.bandwidth() / 2 + (x.bandwidth()), _this.offset.y + (_height - y(this.ctrl_distribution[j])));
     }
+    _this.cx.strokeStyle = "rgba(205, 92, 92, 1)";
+    _this.cx.stroke();
+    _this.cx.closePath();
+
+    _this.cx.strokeStyle = "#000000";
 
   }
 
