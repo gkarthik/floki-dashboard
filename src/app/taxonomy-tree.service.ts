@@ -171,14 +171,9 @@ export class TaxonomyTreeService {
       return x >= minOddsRatio;
     });
     cond.push(keep_node);
-    var termi = term.toString().split("or")
-    // termi = termi
-    keep_node = false
-    for (var i = 0; i < termi.length; i++) {
-      if(d[key].toLowerCase().includes(termi[i].trim()) && d.depth > 1){
-        keep_node = true
-      }
-    }
+    let termi: string[] = term.toString().split("or").map(x => x.toLowerCase().trim());
+    // If some of the terms are included. Not all terms. For "or". This condition will hcange to .every() for "and"
+    keep_node = termi.some(x => d[key].toLowerCase().includes(x));
     cond.push(keep_node);
     keep_node = cond.every(function(x) {
       return x;
@@ -199,52 +194,18 @@ export class TaxonomyTreeService {
     });
     return keep_node;
   }
-  //
-  // compressNodesBasedOnSearch(d: Taxon, key: string, term: string): void {
-  //   if (!d[key].toLowerCase().includes(term) && d.depth > 1) {
-  //     d.taxon_name = "Compressed";
-  //     d.tax_id = -1;
-  //     d.num_nodes = 1;
-  //     console.log(d.children.length);
-  //     while (!d.children.every(function(x) { return x[key].toLowerCase().includes(term); })) {
-  //       for (var i = 0; i < d.children.length; i++) {
-  //         if (!d.children[i][key].toLowerCase().includes(term)) {
-  //           if (d.children[i].children != null) {
-  //             d.children = d.children.concat(d.children[i].children);
-  //           }
-  //           d.children.splice(i, 1);
-  //           d.num_nodes += 1;
-  //           i--;
-  //         }
-  //       }
-  //     }
-  //   }
-  //   for (var i = 0; i < d.children.length; i++) {
-  //     this.compressNodesBasedOnSearch(d.children[i], key, term);
-  //   }
-  // }
 
   compressNodesBasedOnSearch(d: Taxon, key: string, term: string): void {
-    var termi = term.toLowerCase().toString().split("or")
-    var flag = false
-
-    for (var i = 0; i < termi.length; i++) {
-      if(d[key].toLowerCase().includes(termi[i].trim())){
-        flag = true;
-      }
-    }
-    if (flag==false && d.depth > 1) {
-      console.log(d[key])
-      console.log(termi)
-      console.log(!d.children.every(r=> termi.includes(r[key].toLowerCase())));
+    let termi: string[] = term.toString().split("or").map(x => x.toLowerCase().trim());
+    let flag: boolean = termi.some(x => d[key].toLowerCase().includes(x));
+    if (!flag && d.depth > 1) {
       d.taxon_name = "Compressed";
       d.tax_id = -1;
       d.num_nodes = 1;
-      console.log(d.children)
-      console.log(!d.children.every(r=> termi.includes(r[key].toLowerCase())))
-      while (!d.children.every(r=> termi.includes(r[key].toLowerCase()))) {
+      // .some will change to .every() for "and" condition. .some() for "or" condition.
+      while (!d.children.every(r => termi.some(x => r[key].toLowerCase().includes(x)))) {
         for (var y = 0; y < d.children.length; y++) {
-          if (!termi.includes(d.children[y][key].toLowerCase())) {
+          if (!termi.some(x => d.children[y][key].toLowerCase().includes(x))) {
             if (d.children[y].children != null) {
               d.children = d.children.concat(d.children[y].children);
             }
