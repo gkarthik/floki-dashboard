@@ -362,7 +362,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       _this.cx.stroke();
       _this.cx.closePath();
       _this.cx.beginPath();
-      _this.cx.font = "18px Open Sans";
+      _this.cx.font = "18px 'Lato', sans-serif";
       _this.cx.fillStyle = _node.attr("text_fill");
       if (d.data.tax_id == -1) {
         _this.cx.textAlign = "center";

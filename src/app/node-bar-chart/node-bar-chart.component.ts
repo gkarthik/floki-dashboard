@@ -89,7 +89,7 @@ export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
     x.domain().forEach(function(d) {
       _this.cx.moveTo(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height);
       _this.cx.lineTo(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 6);
-      _this.cx.font = "12px Open Sans";
+      _this.cx.font = "12px 'Lato', sans-serif";
       _this.cx.save();
       _this.cx.translate(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 6);
       _this.cx.rotate(-Math.PI / 2);
