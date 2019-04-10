@@ -25,6 +25,7 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
   private bins: number[] = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
   private keyTitle: string = "";
 
+  private selectedFile: string;
 
   private offset: { [id: string]: number } = {
     "x": 50,
@@ -51,13 +52,17 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
 
   ngOnChanges(changes: SimpleChanges) {
     if (!_.isEmpty(this.nodeData)) {
-      console.log(this.nodeData[this.key]);
+      this.selectedFile = (this.nodeData["file"].length > 0) ? this.nodeData["file"][0] : "";
       this.distribution = [];
-      if (this.nodeData["ctr_l" + this.key] != "")
+      if (this.nodeData["ctrl_" + this.key] != "")
         this.ctrl_distribution = this.nodeData["ctrl_" + this.key].split(",").map(x => parseInt(x))
+      else
+        this.ctrl_distribution = Array(10).fill(0);
       for (var i = 0; i < this.nodeData[this.key].length; i++) {
         if (this.nodeData[this.key][i] != "")
           this.distribution.push(this.nodeData[this.key][i].split(",").map(x => parseInt(x)));
+        else
+          this.distribution.push(Array(10).fill(0));
       }
       this.drawChart();
     }
@@ -70,6 +75,9 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
     let _height: number = this.screenHeight / 4 - (2 * this.offset.y) - 50;
     var _padding = this.padding;
     let _data = this.nodeData;
+    let file_indice: number = _data.file.indexOf(this.selectedFile);
+    console.log(this.distribution);
+    console.log(this.distribution[file_indice]);
 
     var x: ScaleBand<any> = d3.scaleBand()
       .rangeRound([0, _width])
@@ -77,7 +85,7 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
     let y: ScaleLinear<number, number> = d3.scaleLinear()
       .rangeRound([0, _height]);
     x.domain(this.bins);
-    let y_domain_elmns = [].concat.apply([], this.distribution);
+    let y_domain_elmns = _.cloneDeep(this.distribution[file_indice]);
     y_domain_elmns.push.apply(y_domain_elmns, this.ctrl_distribution); // Get ctrl value as well
     y_domain_elmns.push(0); // Add zero
     let y_domain = [Math.min.apply(Math, y_domain_elmns), Math.max.apply(Math, y_domain_elmns)];
@@ -124,16 +132,13 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
     this.cx.stroke();
 
     let sampleColor = d3.scaleOrdinal(d3.schemeCategory10).domain(_data["file"]);
-    let c;
+    let c = d3.color(sampleColor(_data["file"][file_indice]));
 
-    for (var i = 0; i < this.distribution.length; i++) {
-      c = d3.color(sampleColor(_data["file"][i]));
-      c.opacity = 0.01;
-      for (var j = 0; j < this.distribution[i].length; j++) {
-        _this.cx.fillStyle = c + "";
-        _this.cx.rect(_this.offset.x + x(j * 0.1) + x.bandwidth() / 2, _this.offset.y + (_height - y(this.distribution[i][j])), x.bandwidth(), y(this.distribution[i][j]));
-        _this.cx.fill();
-      }
+    c.opacity = 1;
+    for (var j = 0; j < this.distribution[file_indice].length; j++) {
+      _this.cx.fillStyle = c + "";
+      _this.cx.rect(_this.offset.x + x(j * 0.1) + x.bandwidth() / 2, _this.offset.y + (_height - y(this.distribution[file_indice][j])), x.bandwidth(), y(this.distribution[file_indice][j]));
+      _this.cx.fill();
     }
     this.cx.closePath();
 

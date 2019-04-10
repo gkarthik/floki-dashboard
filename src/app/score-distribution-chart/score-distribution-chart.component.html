@@ -1,2 +1,5 @@
 <h4>{{keyTitle | uppercase}}</h4>
+<select [(ngModel)]="selectedFile" (ngModelChange)="drawChart()">
+  <option *ngFor="let c of nodeData.file" [ngValue]="c">{{c}}</option>
+</select>
 <canvas #chartWrapper id="chart-wrapper"></canvas>
