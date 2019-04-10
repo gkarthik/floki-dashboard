@@ -86,18 +86,6 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
     }
     y.domain(y_domain);
 
-
-    // x and y axis
-    this.cx.beginPath();
-    this.cx.lineWidth = 2;
-    this.cx.strokeStyle = "#000000";
-    this.cx.moveTo(this.offset.x, _height + this.offset.y);
-    this.cx.lineTo(this.offset.x + (x.padding() + x.bandwidth()) * (this.bins.length + 1), _height + this.offset.y);
-    this.cx.moveTo(this.offset.x, this.offset.y);
-    this.cx.lineTo(this.offset.x, this.offset.y + _height + 1);
-    this.cx.stroke();
-    this.cx.closePath();
-
     // x ticks
     this.cx.beginPath();
     this.cx.fillStyle = "#000000";
@@ -105,15 +93,15 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
     let _this = this;
     x.domain().forEach(function(d) {
       _this.cx.moveTo(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height);
-      _this.cx.lineTo(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 6);
+      _this.cx.lineTo(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 8);
       _this.cx.font = "12px Open Sans";
       _this.cx.save();
-      _this.cx.translate(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 6);
+      _this.cx.translate(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 8);
       _this.cx.rotate(-Math.PI / 2);
-      _this.cx.translate(-1 * (_this.offset.x + x(d) + x.bandwidth() / 2), -1 * (_this.offset.y + _height + 6));
+      _this.cx.translate(-1 * (_this.offset.x + x(d) + x.bandwidth() / 2), -1 * (_this.offset.y + _height + 8));
       _this.cx.textAlign = "right";
       _this.cx.textBaseline = "middle";
-      _this.cx.fillText(d, _this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 6);
+      _this.cx.fillText(d, _this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 8);
       _this.cx.restore();
     });
     _this.cx.strokeStyle = "#000000";
@@ -159,6 +147,18 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
     _this.cx.stroke();
     _this.cx.closePath();
 
+
+    // x and y axis
+    this.cx.beginPath();
+    this.cx.lineWidth = 2;
+    this.cx.strokeStyle = "#000000";
+    this.cx.moveTo(this.offset.x, _height + this.offset.y);
+    this.cx.lineTo(this.offset.x + (x.padding() + x.bandwidth()) * (this.bins.length + 1), _height + this.offset.y);
+    this.cx.moveTo(this.offset.x, this.offset.y);
+    this.cx.lineTo(this.offset.x, this.offset.y + _height + 1);
+    this.cx.stroke();
+    this.cx.closePath();
+
     _this.cx.strokeStyle = "#000000";
 
   }
@@ -168,9 +168,9 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
     this.canvasEl = canvasEl;
     let dpr: number = window.devicePixelRatio || 1;
     let rect = canvasEl.getBoundingClientRect();
-    canvasEl.width = (this.screenWidth / 2 - 30) * dpr;
+    canvasEl.width = (this.screenWidth / 3 - 30) * dpr;
     canvasEl.height = this.screenHeight / 4 * dpr;
-    canvasEl.style.width = String(this.screenWidth / 2 - 30) + "px";
+    canvasEl.style.width = String(this.screenWidth / 3 - 30) + "px";
     canvasEl.style.height = String(this.screenHeight / 4) + "px";
     this.cx = canvasEl.getContext('2d');
     this.cx.scale(dpr, dpr);

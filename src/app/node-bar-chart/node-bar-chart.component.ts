@@ -70,17 +70,6 @@ export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
     }
     y.domain(y_domain);
 
-    // x and y axis
-    this.cx.beginPath();
-    this.cx.lineWidth = 2;
-    this.cx.strokeStyle = "#000000";
-    this.cx.moveTo(this.offset.x, _height + this.offset.y);
-    this.cx.lineTo(this.offset.x + (x.padding() + x.bandwidth()) * (_data[this.key].length + 1), _height + this.offset.y);
-    this.cx.moveTo(this.offset.x, this.offset.y);
-    this.cx.lineTo(this.offset.x, this.offset.y + _height + 1);
-    this.cx.stroke();
-    this.cx.closePath();
-
     // x ticks
     this.cx.beginPath();
     this.cx.fillStyle = "#000000";
@@ -91,7 +80,7 @@ export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
       _this.cx.lineTo(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 6);
       _this.cx.font = "12px 'Lato', sans-serif";
       _this.cx.save();
-      _this.cx.translate(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 6);
+      _this.cx.translate(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 8);
       _this.cx.rotate(-Math.PI / 2);
       _this.cx.translate(-1 * (_this.offset.x + x(d) + x.bandwidth() / 2), -1 * (_this.offset.y + _height + 6));
       _this.cx.textAlign = "right";
@@ -119,10 +108,23 @@ export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
     this.cx.stroke();
 
     for (var i = 0; i < _data[this.key].length; i++) {
-      _this.cx.fillStyle = "steelblue";
-      _this.cx.rect(_this.offset.x + x(_data["file"][i]), _this.offset.y + (_height - y(_data[_this.key][i])), x.bandwidth(), y(_data[_this.key][i]));
-      _this.cx.fill();
+      this.cx.fillStyle = "steelblue";
+      this.cx.rect(this.offset.x + x(_data["file"][i]), this.offset.y + (_height - y(_data[this.key][i])), x.bandwidth(), y(_data[this.key][i]));
+      this.cx.fill();
     }
+
+
+    // x and y axis
+    this.cx.beginPath();
+    this.cx.lineWidth = 2;
+    this.cx.strokeStyle = "#000000";
+    this.cx.moveTo(this.offset.x, _height + this.offset.y);
+    this.cx.lineTo(this.offset.x + x.bandwidth() / 2 + (x.padding() + x.bandwidth()) * (_data[this.key].length + 1), _height + this.offset.y);
+    this.cx.moveTo(this.offset.x, this.offset.y);
+    this.cx.lineTo(this.offset.x, this.offset.y + _height + 1);
+    this.cx.stroke();
+    this.cx.closePath();
+
     this.cx.beginPath();
     this.cx.strokeStyle = "#FF0000";
     this.cx.moveTo(this.offset.x, this.offset.y + (_height - y(_data["ctrl_" + this.key])));
@@ -135,9 +137,9 @@ export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
     this.canvasEl = canvasEl;
     let dpr: number = window.devicePixelRatio || 1;
     let rect = canvasEl.getBoundingClientRect();
-    canvasEl.width = (this.screenWidth / 2 - 30) * dpr;
+    canvasEl.width = (this.screenWidth / 3 - 30) * dpr;
     canvasEl.height = this.screenHeight / 4 * dpr;
-    canvasEl.style.width = String(this.screenWidth / 2 - 30) + "px";
+    canvasEl.style.width = String(this.screenWidth / 3 - 30) + "px";
     canvasEl.style.height = String(this.screenHeight / 4) + "px";
     this.cx = canvasEl.getContext('2d');
     this.cx.scale(dpr, dpr);

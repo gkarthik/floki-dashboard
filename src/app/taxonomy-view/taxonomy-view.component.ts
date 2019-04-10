@@ -371,7 +371,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       } else if (d.children != null) {
         _this.cx.textAlign = "center";
         _this.cx.textBaseline = 'middle';
-        _this.cx.fillText(_node.text(), x, y + parseFloat(_node.attr("size")) + 5);
+        _this.cx.fillText(_node.text(), x, y - parseFloat(_node.attr("size")) * 2 - 5);
       } else {
         _this.cx.textAlign = "left";
         _this.cx.textBaseline = 'middle';
@@ -398,7 +398,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     let rect = canvasEl.getBoundingClientRect();
     canvasEl.width = (this.screenWidth * (2 / 3) - 30) * dpr;
     canvasEl.height = this.screenHeight * dpr;
-    // canvasEl.style.width = String(this.screenWidth/2 - 30)+"px";
+    // canvasEl.style.width = String(this.screenWidth / 2 - 30) + "px";
     canvasEl.style.height = String(this.screenHeight) + "px";
     this.cx = canvasEl.getContext('2d');
     this.cx.scale(dpr, dpr);
