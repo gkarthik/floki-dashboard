@@ -93,7 +93,7 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
     let _this = this;
     x.domain().forEach(function(d) {
       _this.cx.moveTo(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height);
-      _this.cx.lineTo(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 8);
+      _this.cx.lineTo(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 6);
       _this.cx.font = "12px Open Sans";
       _this.cx.save();
       _this.cx.translate(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 8);

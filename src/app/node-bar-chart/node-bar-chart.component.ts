@@ -82,10 +82,10 @@ export class NodeBarChartComponent implements OnChanges, AfterViewInit, OnInit {
       _this.cx.save();
       _this.cx.translate(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 8);
       _this.cx.rotate(-Math.PI / 2);
-      _this.cx.translate(-1 * (_this.offset.x + x(d) + x.bandwidth() / 2), -1 * (_this.offset.y + _height + 6));
+      _this.cx.translate(-1 * (_this.offset.x + x(d) + x.bandwidth() / 2), -1 * (_this.offset.y + _height + 8));
       _this.cx.textAlign = "right";
       _this.cx.textBaseline = "middle";
-      _this.cx.fillText(d.split(".")[0], _this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 6);
+      _this.cx.fillText(d.split(".")[0], _this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 8);
       _this.cx.restore();
     });
     _this.cx.strokeStyle = "#000000";
