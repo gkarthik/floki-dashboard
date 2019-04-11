@@ -22,7 +22,7 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
 
   private ctrl_distribution: number[] = [];
   private distribution: number[][] = [];
-  private bins: number[] = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
+  private bins: string[] = ["0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"];
   private keyTitle: string = "";
 
   private selectedFile: string;
@@ -76,15 +76,16 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
     var _padding = this.padding;
     let _data = this.nodeData;
     let file_indice: number = _data.file.indexOf(this.selectedFile);
+    let _this = this;
     console.log(this.distribution);
     console.log(this.distribution[file_indice]);
 
     var x: ScaleBand<any> = d3.scaleBand()
+      .domain(_this.bins)
       .rangeRound([0, _width])
       .padding(0.1);
     let y: ScaleLinear<number, number> = d3.scaleLinear()
       .rangeRound([0, _height]);
-    x.domain(this.bins);
     let y_domain_elmns = _.cloneDeep(this.distribution[file_indice]);
     y_domain_elmns.push.apply(y_domain_elmns, this.ctrl_distribution); // Get ctrl value as well
     y_domain_elmns.push(0); // Add zero
@@ -98,7 +99,6 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
     this.cx.beginPath();
     this.cx.fillStyle = "#000000";
     this.cx.strokeStyle = "#000000";
-    let _this = this;
     x.domain().forEach(function(d) {
       _this.cx.moveTo(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height);
       _this.cx.lineTo(_this.offset.x + x(d) + x.bandwidth() / 2, _this.offset.y + _height + 6);
@@ -133,11 +133,14 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
 
     let sampleColor = d3.scaleOrdinal(d3.schemeCategory10).domain(_data["file"]);
     let c = d3.color(sampleColor(_data["file"][file_indice]));
+    let xVal: string;
 
     c.opacity = 1;
     for (var j = 0; j < this.distribution[file_indice].length; j++) {
       _this.cx.fillStyle = c + "";
-      _this.cx.rect(_this.offset.x + x(j * 0.1) + x.bandwidth() / 2, _this.offset.y + (_height - y(this.distribution[file_indice][j])), x.bandwidth(), y(this.distribution[file_indice][j]));
+      xVal = (Math.round(j * 0.1 * 10) / 10).toFixed(1);
+      console.log(xVal);
+      _this.cx.rect(_this.offset.x + x(xVal) + x.bandwidth() / 2, _this.offset.y + (_height - y(this.distribution[file_indice][j])), x.bandwidth(), y(this.distribution[file_indice][j]));
       _this.cx.fill();
     }
     this.cx.closePath();
