@@ -56,8 +56,49 @@ export class TaxonomyTreeService {
     return nodes;
   }
 
+  filterTreeRank(d: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
+    let cond = [], keep_node: boolean = false, tmp, _this = this;
+
+    // Minimum number of reads
+    keep_node = d.taxon_reads.some(function(x) {
+      return x >= minReads;
+    });
+    cond.push(keep_node);
+    // Maximum pvalue
+    keep_node = d.pvalue.some(function(x) {
+      return x <= sigLevel;
+    });
+    cond.push(keep_node);
+    // Minimum odds ratio
+    keep_node = d.oddsratio.some(function(x) {
+      return x >= minOddsRatio;
+    });
+    cond.push(keep_node);
+    keep_node = (d.rank != 'no rank');
+    cond.push(keep_node);
+    keep_node = cond.every(function(x) {
+      return x;
+    });
+    cond = [keep_node];
+    if (d.children != null) {
+      for (var i = 0; i < d.children.length; i++) {
+        tmp = this.filterTreeRank(d.children[i], minReads, sigLevel, minOddsRatio);
+        cond.push(tmp);
+        if (!tmp) {
+          d.children.splice(i, 1);
+          i--;
+        }
+      }
+    }
+    keep_node = cond.some(function(x) {
+      return x;
+    });
+    return keep_node;
+  }
+
   filterTaxonomyTree(d: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
     let cond = [], keep_node: boolean = false, tmp, _this = this;
+
     // Minimum number of reads
     keep_node = d.taxon_reads.some(function(x) {
       return x >= minReads;
@@ -130,6 +171,25 @@ export class TaxonomyTreeService {
       return x;
     });
     return keep_node;
+  }
+
+  compressNodesRank(d: Taxon): void {
+    if (d.rank != 'no rank' && d.depth>1) {
+      while (d.children.some(function(x) { return (x.rank == 'no rank'); })) {
+        for (var i = 0; i < d.children.length; i++) {
+          if (d.children[i].rank == 'no rank') {
+            if (d.children[i].children != null)
+              d.children = d.children.concat(d.children[i].children);
+            d.children.splice(i, 1);
+            // d.num_nodes += 1;
+            i--;
+          }
+        }
+      }
+    }
+    for (var i = 0; i < d.children.length; i++) {
+      this.compressNodesRank(d.children[i]);
+    }
   }
 
   compressNodesBasedOnAnnotation(d: Taxon, key: string): void {
@@ -219,6 +279,13 @@ export class TaxonomyTreeService {
     for (var z = 0; z < d.children.length; z++) {
       this.compressNodesBasedOnSearch(d.children[z], key, term);
     }
+  }
+
+  filterTree(d: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
+    let data = _.cloneDeep(this.jsonData);
+    this.filterTreeRank(data, minReads, sigLevel, minOddsRatio);
+    this.compressNodesRank(data);
+    return data;
   }
 
   filterPathogenic(minReads: number, sigLevel: number, minOddsRatio: number): Taxon {

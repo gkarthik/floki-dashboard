@@ -105,8 +105,9 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     this.update();
   }
 
-  showPathogenic(): void {
-    this.taxonomyTree = this.taxonomyTreeService.filterPathogenic(this.minReads, this.sigLevel, this.minOddsRatio);
+  showPathogenic(tax_id: number): void {
+    this.taxonomyTree = this.taxonomyTreeService.filterTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
+    // this.taxonomyTree = this.taxonomyTreeService.filterPathogenic(this.minReads, this.sigLevel, this.minOddsRatio);
     // this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
     this.pathToRoot = [this.taxonomyTree];
     this.currentNode = this.taxonomyTree;
