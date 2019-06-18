@@ -9,6 +9,7 @@ import { TaxonomyViewComponent } from './taxonomy-view/taxonomy-view.component';
 import { NodeBarChartComponent } from './node-bar-chart/node-bar-chart.component';
 import { AnnotationComponent } from './annotation/annotation.component';
 import { ScoreDistributionChartComponent } from './score-distribution-chart/score-distribution-chart.component';
+import { RegressionComponent } from './regression/regression.component';
 
 @NgModule({
   declarations: [
@@ -16,7 +17,8 @@ import { ScoreDistributionChartComponent } from './score-distribution-chart/scor
     TaxonomyViewComponent,
     NodeBarChartComponent,
     AnnotationComponent,
-    ScoreDistributionChartComponent
+    ScoreDistributionChartComponent,
+    RegressionComponent
   ],
   imports: [
     HttpClientModule,

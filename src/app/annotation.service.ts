@@ -11,7 +11,7 @@ import { AntibioticResistance } from './antibiotic-resistance';
 })
 export class AnnotationService {
   private reportUrl = "./assets/json-reports/ar.json";
-  
+
   constructor(
     private http: HttpClient
   ) { }
@@ -25,7 +25,7 @@ export class AnnotationService {
       return of(result as T);
     };
   }
-  
+
   getJson(): Observable<any> {
     return this.http.get<any>(this.reportUrl)
       .pipe(
