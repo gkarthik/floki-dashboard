@@ -1,3 +1,27 @@
-<p>
-  regression works!
-</p>
+
+<body>
+  <table>
+    <tr>
+      <th>Sample selection:  </th>
+      <th>&nbsp;</th>
+      <th>Taxon:</th>
+      <!-- <th>Taxon selection:</th> -->
+    </tr>
+    <tr>
+      <td>
+        <select [(ngModel)]="selectedSample" (ngModelChange)="realize()">
+          <option *ngFor="let c of jsonData.file" [ngValue]="c">{{c}}</option>
+        </select>
+      </td>
+      <td>&nbsp;</td>
+      <td>
+        <select [(ngModel)]="selectedTaxon" (ngModelChange)="realize()">
+          <option value = "species">species</option>
+          <option value = "genus">genus</option>
+        </select>
+      </td>
+    </tr>
+  </table>
+  <p id="h1">Select a sample from the dropdown</p>
+  <svg id = 'plot'></svg>
+</body>

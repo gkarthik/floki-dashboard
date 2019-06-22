@@ -2,6 +2,9 @@ import { Component, OnInit, AfterViewInit } from '@angular/core';
 
 import { Taxon } from '../taxon';
 
+import * as tf from '@tensorflow/tfjs';
+import * as tfvis from '@tensorflow/tfjs-vis';
+
 import { RegressionService } from '../regression.service';
 //
 // import * as tf from '@tensorflow/tfjs';
@@ -22,17 +25,30 @@ export class RegressionComponent implements AfterViewInit, OnInit  {
   private linearModel: tf.Sequential = null;
   private filterednodes: Taxon = new Taxon();
 
+  private selectedSample: string;
+  private selectedTaxon: string;
+
   ngOnInit() {
     this.regressionService.getTree().subscribe(_ => this.onInit(_));
   }
 
   onInit(_: Taxon): void {
     this.jsonData = _;
-    this.regressionService.learningModel(this.jsonData);
+
   }
 
   ngAfterViewInit(){
 
+  }
+
+  realize(){
+    this.regressionService.learningModel(this.jsonData, this.selectedSample, this.selectedTaxon);
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (!_.isEmpty(this.nodeData)) {
+      this.selectedSample = (this.jsonData["file"].length > 0) ? this.jsonData["file"][0] : "";
+    }
   }
 
   // async train() {
