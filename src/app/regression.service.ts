@@ -49,29 +49,69 @@ export class RegressionService {
       );
   }
 
+  cutScores(d: Taxon, threshold: number, selectedSample: string){
+    let num = d.file.indexOf(selectedSample)
+    this.scoreCut(d,threshold,num);
+    return d;
+  }
+
+  scoreCut(d: Taxon, threshold: number, j: number){
+    let ctrlscorearray = null;
+    ctrlscorearray = d.ctrl_forward_score_distribution.split(",");
+    for (let k = 0; k < 10; k++) {
+      if(((k/10) + 0.1)< threshold){
+        if(d.ctrl_reads-ctrlscorearray[k] <= 0 || isNaN(d.ctrl_reads-ctrlscorearray[k])){
+          d.ctrl_reads = 0;
+        }else {
+          d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k]
+        }
+      }
+    }
+    // for (let j = 0; j < d.file.length; j++) {
+      let cutreads = null;
+      cutreads = 0;
+      let scorearray = null;
+      scorearray = d.forward_score_distribution[j].split(",");
+      for (let k = 0; k < 10; k++) {
+        if(((k/10) + 0.1)< threshold){
+          if(d.reads[j]-scorearray[k] < 0){
+            d.reads[j] = 0;
+          }else {
+            d.reads[j] = d.reads[j]-scorearray[k];
+          }
+        }
+      }
+    // }
+      for (let i = 0; i < d.children.length; i++) {
+        this.scoreCut(d.children[i], threshold, j);
+      }
+  }
+
   findTaxons(d: Taxon, x = {}){
     this.x[this.selectedSample]=[]
     this.x[this.selectedSample][0]=[]
     this.x[this.selectedSample][1]=[]
     this.x[this.selectedSample][2]=[]
+    this.x[this.selectedSample][3]=[]
     this.searchthetree(d,this.x);
   }
 
   searchthetree(d: Taxon, x: {}): void{
     let index = d.file.indexOf(this.selectedSample);
     if(d.rank==this.selectedTaxon){
-      if(d.taxon_reads[index]>0 && d.ctrl_reads>0){
-        if(d.ctrl_reads<=0 || d.taxon_name=="Homo sapiens"){
-          this.x[this.selectedSample][0].push(1);
+      if(d.reads[index]>0 && d.taxon_name!="Homo sapiens"){
+        if(d.ctrl_reads<=0 ){
+          this.x[this.selectedSample][0].push(0.1);
         }else{
-          this.x[this.selectedSample][0].push(d.ctrl_reads);
+          this.x[this.selectedSample][0].push(d.ctrl_reads+Math.random()*0.15);
         }
-        if(d.taxon_reads[index]<=0 || d.taxon_name=="Homo sapiens"){
-          this.x[this.selectedSample][1].push(1);
+        if(d.reads[index]<=0){
+          this.x[this.selectedSample][1].push(0.1);
         }else{
-          this.x[this.selectedSample][1].push(d.taxon_reads[index]);
+          this.x[this.selectedSample][1].push(d.reads[index]+Math.random()*0.15);
         }
-        this.x[this.selectedSample][2].push(d.taxon_name)
+        this.x[this.selectedSample][2].push(d.taxon_name);
+        this.x[this.selectedSample][3].push(d.pathogenic);
       }
     }
     for (let i = 0; i < d.children.length; i++) {
@@ -86,11 +126,11 @@ export class RegressionService {
     for (let j = 0; j< this.x[this.selectedSample][0].length; j++) {
       this.logcontrolreads.push(Math.log10(this.x[this.selectedSample][0][j]));
       this.logtaxonreads.push(Math.log10(this.x[this.selectedSample][1][j]));
-      this.currentPoints.push([Math.log10(this.x[this.selectedSample][0][j]), Math.log10(this.x[this.selectedSample][1][j]), this.x[this.selectedSample][2][j], 0]);
+      this.currentPoints.push([Math.log10(this.x[this.selectedSample][0][j]), Math.log10(this.x[this.selectedSample][1][j]), this.x[this.selectedSample][2][j], 0, this.x[this.selectedSample][3][j]]);
     };
   }
 
-  async train(d: Taxon) {
+  async train(d: Taxon, current: []) {
 
     this.linearModel = tf.sequential();
     this.linearModel.add(tf.layers.dense({units: 1, inputShape: [1]}));
@@ -115,7 +155,7 @@ export class RegressionService {
 
     let comparingPoints = [];
     for (let j = 0; j<this.x[this.selectedSample][0].length; j++){
-      let output = this.linearModel.predict(tf.tensor2d([this.currentPoints[j][0]], [1, 1])) as any;
+      let output = this.linearModel.predict(tf.tensor2d([current[j][0]], [1, 1])) as any;
       let prediction = Array.from(output.dataSync())[0]
       if(isNaN(prediction)){
         comparingPoints.push(0);
@@ -126,11 +166,11 @@ export class RegressionService {
 
     this.pointCounts=[0,0,0]
     for (let j = 0; j<this.x[this.selectedSample][0].length; j++){
-      if(this.currentPoints[j][1] > comparingPoints[j]){
-        this.currentPoints[j][3]=2;
+      if(current[j][1] > comparingPoints[j]){
+        current[j][3]=2;
         this.pointCounts[2]+=1
-      }else if (Math.round(Math.pow(10,this.currentPoints[j][1])) == Math.round(Math.pow(10,comparingPoints[j]))){
-        this.currentPoints[j][3]=1;
+      }else if (Math.round(Math.pow(10,current[j][1])) == Math.round(Math.pow(10,comparingPoints[j]))){
+        current[j][3]=1;
         this.pointCounts[1]+=1
       }else {
         this.pointCounts[0]+=1
@@ -138,8 +178,8 @@ export class RegressionService {
     }
     document.getElementById("h1").innerHTML = '&nbsp';
 
-    return [this.predictedPoints, this.pointCounts];
-    // return this.currentPoints;
+    // return [this.predictedPoints, this.pointCounts];
+    return [current,this.predictedPoints,this.pointCounts];
   }
 
   learningModel(d: Taxon, sample: string, taxon: string) {

@@ -39,6 +39,68 @@ export class TaxonomyTreeService {
       );
   }
 
+  cutScores(d: Taxon, threshold: number){
+    this.scoreCut(d,threshold);
+    return d;
+  }
+
+  scoreCut(d: Taxon, threshold: number){
+    let ctrlscorearray = null;
+    ctrlscorearray = d.ctrl_forward_score_distribution.split(",");
+    for (let k = 0; k < 10; k++) {
+      if(((k/10) + 0.1)< threshold){
+        if(d.ctrl_reads-ctrlscorearray[k] <= 0 || isNaN(d.ctrl_reads-ctrlscorearray[k])){
+          d.ctrl_reads = 0;
+        }else {
+          d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k]
+        }
+      }
+    }
+    for (let j = 0; j < d.file.length; j++) {
+      let cutreads = null;
+      cutreads = 0;
+      let scorearray = null;
+      scorearray = d.forward_score_distribution[j].split(",");
+      for (let k = 0; k < 10; k++) {
+        if(((k/10) + 0.1)< threshold){
+          if(d.reads[j]-scorearray[k] < 0){
+            d.reads[j] = 0;
+          }else {
+            d.reads[j] = d.reads[j]-scorearray[k];
+          }
+        }
+      }
+    }
+      for (let i = 0; i < d.children.length; i++) {
+        this.scoreCut(d.children[i], threshold);
+      }
+  }
+  // scoreCut(d: Taxon, threshold: number){
+  //   for (let j = 0; j < d.file.length; j++) {
+  //     let cutreads = null;
+  //     cutreads = 0;
+  //     let scorearray = null;
+  //     scorearray = d.forward_score_distribution[j].split(",")
+  //     for (let k = 0; k < 10; k++) {
+  //       if(((k/10) + 0.1)< threshold){
+  //         // cutreads += d.forward_score_distribution[j][k]
+  //         if(d.taxon_reads[j]-scorearray[k] < 0){
+  //          d.taxon_reads[j] = 0;
+  //        }
+  //         if(d.taxon_reads[j]-scorearray[k] < 0){
+  //           d.taxon_reads[j] = 0;
+  //         }else {
+  //           d.taxon_reads[j] = d.taxon_reads[j]-scorearray[k];
+  //         }
+  //       }
+  //     }
+  //     // console.log(cutreads);
+  //   }
+  //     for (let i = 0; i < d.children.length; i++) {
+  //       this.scoreCut(d.children[i], threshold);
+  //     }
+  // }
+
   getLayout(data: Taxon, height: number, width: number, offsetX: number, offsetY: number, depth: number): HierarchyPointNode<Taxon>[] {
     let root = d3.hierarchy(data, function(d) { return d.children; });
     let tree_layout = d3.cluster<Taxon>().size([height - offsetX * 2, width - offsetY * 2]);
