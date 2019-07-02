@@ -53,13 +53,11 @@ export class TaxonomyTreeService {
         if(d.ctrl_reads-ctrlscorearray[k] <= 0 || isNaN(d.ctrl_reads-ctrlscorearray[k])){
           d.ctrl_reads = 0;
         }else {
-          d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k]
+          d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k];
         }
       }
     }
     for (let j = 0; j < d.file.length; j++) {
-      let cutreads = null;
-      cutreads = 0;
       let scorearray = null;
       scorearray = d.forward_score_distribution[j].split(",");
       for (let k = 0; k < 10; k++) {
@@ -72,15 +70,13 @@ export class TaxonomyTreeService {
         }
       }
     }
-    if(d.children){
-      for (let i = 0; i < d.children.length; i++) {
-        this.cutScoresNode(d.children[i], threshold);
-      }
+    for (let i = 0; i < d.children.length; i++) {
+      this.cutScoresNode(d.children[i], threshold);
     }
   }
 
   sumTaxReads(d: Taxon){
-    let childreads = Array(12).fill(0);
+    let childreads = Array(d.file.length).fill(0);
     let child_ctrlreads = 0;
     if(d.children){
       // childreads = childreads + d.children.forEach(this.sumTaxReads);
@@ -92,11 +88,6 @@ export class TaxonomyTreeService {
         child_ctrlreads = child_ctrlreads + tmp[1];
       }
     }
-    // else{
-    //   childreads = Array(12).fill(0);
-    // }
-
-    // d.taxon_reads = d.reads + childreads;
     for (let j = 0; j < d.file.length; j++) {
       if(isNaN(d.reads[j])){
         d.taxon_reads[j] = childreads[j]+0
@@ -169,8 +160,17 @@ export class TaxonomyTreeService {
   //   return keep_node;
   // }
 
-  filterTaxonomyTree(d: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
+  filterTaxonomyTree(d: Taxon, rootreads: number[], minReads: number, sigLevel: number, minOddsRatio: number): boolean {
     let cond = [], keep_node: boolean = false, tmp, _this = this;
+
+    d.ctrl_percentage = d.ctrl_taxon_reads/rootreads[1];
+    d.percentage = d.taxon_reads.map(function(x,idx){
+      if(isNaN(x/rootreads[0][idx])){
+        return 0;
+      }else{
+        return x/rootreads[0][idx];
+      }
+    });
     // var a = [1,2,3,4]
     // var t = a.map(x=>x>5)
     // console.log(t)
@@ -206,7 +206,7 @@ export class TaxonomyTreeService {
     cond = [keep_node];
     if (d.children != null) {
       for (var i = 0; i < d.children.length; i++) {
-        tmp = this.filterTaxonomyTree(d.children[i], minReads, sigLevel, minOddsRatio);
+        tmp = this.filterTaxonomyTree(d.children[i], rootreads, minReads, sigLevel, minOddsRatio);
         cond.push(tmp);
         if (!tmp) {
           d.children.splice(i, 1);
@@ -220,11 +220,19 @@ export class TaxonomyTreeService {
     return keep_node;
   }
 
-  filterBasedOnAnnotations(d: Taxon, key: string, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
+  filterBasedOnAnnotations(d: Taxon, rootreads: number[], key: string, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
     let cond = [], keep_node: boolean = false, tmp, _this = this;
 
-    let thresholdarr = []
+    d.ctrl_percentage = d.ctrl_taxon_reads/rootreads[1];
+    d.percentage = d.taxon_reads.map(function(x,idx){
+      if(isNaN(x/rootreads[0][idx])){
+        return 0;
+      }else{
+        return x/rootreads[0][idx];
+      }
+    });
 
+    let thresholdarr = []
     //pathogenic
     keep_node = (d[key] == 1);
     cond.push(keep_node);
@@ -259,7 +267,7 @@ export class TaxonomyTreeService {
 
     if (d.children != null) {
       for (var i = 0; i < d.children.length; i++) {
-        tmp = this.filterBasedOnAnnotations(d.children[i], key, minReads, sigLevel, minOddsRatio);
+        tmp = this.filterBasedOnAnnotations(d.children[i], rootreads, key, minReads, sigLevel, minOddsRatio);
         cond.push(tmp);
         if (!tmp) {
           d.children.splice(i, 1);
@@ -314,9 +322,17 @@ export class TaxonomyTreeService {
     }
   }
 
-  filterBasedOnSearch(d: Taxon, key: string, term: string, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
+  filterBasedOnSearch(d: Taxon, rootreads: number[], key: string, term: string, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
     let cond = [], keep_node: boolean = false, tmp, _this = this;
 
+    d.ctrl_percentage = d.ctrl_taxon_reads/rootreads[1];
+    d.percentage = d.taxon_reads.map(function(x,idx){
+      if(isNaN(x/rootreads[0][idx])){
+        return 0;
+      }else{
+        return x/rootreads[0][idx];
+      }
+    });
     // searching
     let termi: string[] = term.toString().split("or").map(x => x.toLowerCase().trim());
     // If some of the terms are included. Not all terms. For "or". This condition will change to .every() for "and"
@@ -354,7 +370,7 @@ export class TaxonomyTreeService {
 
     if (d.children != null) {
       for (var i = 0; i < d.children.length; i++) {
-        tmp = this.filterBasedOnSearch(d.children[i], key, term, minReads, sigLevel, minOddsRatio);
+        tmp = this.filterBasedOnSearch(d.children[i], rootreads, key, term, minReads, sigLevel, minOddsRatio);
         cond.push(tmp);
         if (!tmp) {
           d.children.splice(i, 1);
@@ -401,19 +417,19 @@ export class TaxonomyTreeService {
   //   return data;
   // }
 
-  filterPathogenic(data: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
-    this.filterBasedOnAnnotations(data, "pathogenic", minReads, sigLevel, minOddsRatio);
+  filterPathogenic(data: Taxon, rootreads: number[], minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
+    this.filterBasedOnAnnotations(data, rootreads, "pathogenic", minReads, sigLevel, minOddsRatio);
     this.compressNodesBasedOnAnnotation(data, "pathogenic");
     return data;
   }
 
-  filterSearch(data: Taxon, pathogenic: boolean, searchterm: string, minReads: number, sigLevel: number, minOddsRatio: number, threshold: number): Taxon {
+  filterSearch(data: Taxon, rootreads: number[], pathogenic: boolean, searchterm: string, minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
     if (pathogenic) {
-      this.filterBasedOnAnnotations(data, "pathogenic", minReads, sigLevel, minOddsRatio);
+      this.filterBasedOnAnnotations(data, rootreads, "pathogenic", minReads, sigLevel, minOddsRatio);
     }
     if (searchterm) {
       searchterm = searchterm.toLowerCase();
-      this.filterBasedOnSearch(data, "taxon_name", searchterm, minReads, sigLevel, minOddsRatio);
+      this.filterBasedOnSearch(data, rootreads, "taxon_name", searchterm, minReads, sigLevel, minOddsRatio);
       this.compressNodesBasedOnSearch(data, "taxon_name", searchterm);
     }
     return data;

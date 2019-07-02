@@ -87,7 +87,7 @@ export class RegressionService {
         if (d.ctrl_reads - ctrlscorearray[k] <= 0 || isNaN(d.ctrl_reads - ctrlscorearray[k])) {
           d.ctrl_reads = 0;
         } else {
-          d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k]
+          d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k];
         }
       }
     }
@@ -102,7 +102,6 @@ export class RegressionService {
         }
       }
     }
-
     for (let i = 0; i < d.children.length; i++) {
       this.cutScoreNode(d.children[i], threshold, j);
     }
