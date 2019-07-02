@@ -2,18 +2,10 @@ import { Component, OnInit, AfterViewInit, ElementRef, ViewChild } from '@angula
 
 import { Taxon } from '../taxon';
 
-import * as tf from '@tensorflow/tfjs';
-import * as tfvis from '@tensorflow/tfjs-vis';
-
 import { RegressionService } from '../regression.service';
 // import { TaxonomyTreeService } from '../taxonomy-tree.service';
 
-import { HierarchyPointNode } from 'd3-hierarchy';
-import { Selection } from 'd3-selection';
-import { ScaleSequential } from 'd3-scale';
-
 import * as d3 from 'd3';
-import { privateDecrypt } from 'crypto';
 
 @Component({
   selector: 'app-regression',
@@ -60,7 +52,11 @@ export class RegressionComponent implements AfterViewInit, OnInit {
     this.jsonData = this.regressionService.cutScores(this.jsonData, this.scoreThreshold, this.selectedSample);
     this.regressionService.prepareAnalysis(this.selectedSample, this.selectedTaxon); // Sets current points in service
     this.updateplot();
-    this.regressionService.train(this.jsonData).then(currentPoints => { this.updateplot(), this.updateline() });
+    this.regressionService.trainAndPredict(this.jsonData).then(
+      pred => {
+        this.updateplot();
+        this.updateline(pred);
+      });
   }
 
   initializePlot() {
@@ -317,7 +313,8 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .text("");
   }
 
-  updateline() {
+  updateline(pred: number[][]) {
+    console.log(pred);
     let current = this.regressionService.getCurrentPoints();
     let padding = 50;
     let canvas_width = 800;
@@ -339,33 +336,32 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .nice();
 
     var line = d3.line()
-      .x(function(d) { return xScale(d[0]); })
-      .y(function(d) { return yScale(d[1]); })
+      .x(function(d) { return xScale(Math.pow(10, d[0]) - 1); })
+      .y(function(d) { return yScale(Math.pow(10, d[1]) - 1); })
       .curve(d3.curveMonotoneX);
 
     svg.select("#regression_line")
-      .datum(current.map(x => x.predicted))
+      .datum(pred)
       .attr("d", line)
       .attr("stroke-width", 2)
       .style("stroke-dasharray", ("3, 3"))
       .style('fill', 'none')
       .style('stroke', "#FF4533");
 
-    svg.select("#aboveline")
-      .attr("text-anchor", "end")
-      .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 50 + ")")
-      .style("font-size", "15px")
-      .text("In sample: " + predicted[2]);
-    svg.select("#online")
-      .attr("text-anchor", "end")
-      .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 70 + ")")
-      .style("font-size", "15px")
-      .text("Contaminants: " + predicted[1]);
-    svg.select("#belowline")
-      .attr("text-anchor", "end")
-      .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 90 + ")")
-      .style("font-size", "15px")
-      .text("Background: " + predicted[0]);
+    // svg.select("#aboveline")
+    //   .attr("text-anchor", "end")
+    //   .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 50 + ")")
+    //   .style("font-size", "15px")
+    //   .text("In sample: " + predicted[2]);
+    // svg.select("#online")
+    //   .attr("text-anchor", "end")
+    //   .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 70 + ")")
+    //   .style("font-size", "15px")
+    //   .text("Contaminants: " + predicted[1]);
+    // svg.select("#belowline")
+    //   .attr("text-anchor", "end")
+    //   .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 90 + ")")
+    //   .style("font-size", "15px")
+    //   .text("Background: " + predicted[0]);
   }
-
 }

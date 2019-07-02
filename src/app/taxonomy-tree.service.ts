@@ -39,20 +39,20 @@ export class TaxonomyTreeService {
       );
   }
 
-  cutScores(d: Taxon, threshold: number){
-    this.scoreCut(d,threshold);
+  cutScores(d: Taxon, threshold: number) {
+    this.scoreCut(d, threshold);
     // this.sumTaxReads(d);
     return d;
   }
 
-  scoreCut(d: Taxon, threshold: number){
+  scoreCut(d: Taxon, threshold: number) {
     let ctrlscorearray = null;
     ctrlscorearray = d.ctrl_forward_score_distribution.split(",");
     for (let k = 0; k < 10; k++) {
-      if(((k/10) + 0.1)< threshold){
-        if(d.ctrl_reads-ctrlscorearray[k] <= 0 || isNaN(d.ctrl_reads-ctrlscorearray[k])){
+      if (((k / 10) + 0.1) < threshold) {
+        if (d.ctrl_reads - ctrlscorearray[k] <= 0 || isNaN(d.ctrl_reads - ctrlscorearray[k])) {
           d.ctrl_reads = 0;
-        }else {
+        } else {
           d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k]
         }
       }
@@ -63,34 +63,34 @@ export class TaxonomyTreeService {
       let scorearray = null;
       scorearray = d.forward_score_distribution[j].split(",");
       for (let k = 0; k < 10; k++) {
-        if(((k/10) + 0.1)< threshold){
-          if(d.reads[j]-scorearray[k] < 0){
+        if (((k / 10) + 0.1) < threshold) {
+          if (d.reads[j] - scorearray[k] < 0) {
             d.reads[j] = 0;
-          }else {
-            d.reads[j] = d.reads[j]-scorearray[k];
+          } else {
+            d.reads[j] = d.reads[j] - scorearray[k];
           }
         }
       }
     }
-    if(d.children){
+    if (d.children) {
       for (let i = 0; i < d.children.length; i++) {
         this.scoreCut(d.children[i], threshold);
       }
     }
   }
 
-  sumTaxReads(d: Taxon){
+  sumTaxReads(d: Taxon) {
     var childreads = []
-    if(d.children){
+    if (d.children) {
       for (let i = 0; i < d.children.length; i++) {
         childreads = this.sumTaxReads(d.children[i]);
       }
-    }else{
+    } else {
       childreads = Array(12).fill(0);
     }
     console.log(childreads);
     for (let j = 0; j < d.file.length; j++) {
-      d.taxon_reads[j] = d.reads[j]+childreads[j]
+      d.taxon_reads[j] = d.reads[j] + childreads[j]
     }
     return d.taxon_reads
   }
@@ -160,28 +160,28 @@ export class TaxonomyTreeService {
     // console.log(t.some(x=>x))
     let thresholdarr = []
     // Minimum number of reads
-    let t = d.taxon_reads.map(x=>x>=minReads)
-    cond.push(t.some(x=>x))
-    thresholdarr[0]=t;
+    let t = d.taxon_reads.map(x => x >= minReads)
+    cond.push(t.some(x => x))
+    thresholdarr[0] = t;
     // Maximum pvalue
-    let t = d.pvalue.map(x=>x<=sigLevel)
-    cond.push(t.some(x=>x))
-    thresholdarr[1]=t;
+    let t = d.pvalue.map(x => x <= sigLevel)
+    cond.push(t.some(x => x))
+    thresholdarr[1] = t;
     // Minimum odds ratio
-    let t = d.oddsratio.map(x=>x>=minOddsRatio)
-    cond.push(t.some(x=>x))
-    thresholdarr[2]=t;
+    let t = d.oddsratio.map(x => x >= minOddsRatio)
+    cond.push(t.some(x => x))
+    thresholdarr[2] = t;
 
     let t = []
-    for (i = 0; i < d.file.length; i++){
-      if([thresholdarr[0][i],thresholdarr[1][i],thresholdarr[2][i]].every(x=>x)){
+    for (i = 0; i < d.file.length; i++) {
+      if ([thresholdarr[0][i], thresholdarr[1][i], thresholdarr[2][i]].every(x => x)) {
         t.push(1)
-      }else{
+      } else {
         t.push(0)
       }
     }
 
-    d.over_threshold=t;
+    d.over_threshold = t;
 
     keep_node = cond.every(function(x) {
       return x;
