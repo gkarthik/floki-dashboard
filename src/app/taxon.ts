@@ -24,6 +24,7 @@ export class Taxon {
   kmer_coverage: number[];
   file: string[];
   pathogenic: number;
+  over_threshold: number[];
   diseases: [];
   children: Taxon[];
   num_nodes: number;

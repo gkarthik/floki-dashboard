@@ -66,6 +66,8 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   private pathToRoot: Taxon[] = [];
   private canvasWrapper;
 
+  private scoreThreshold: number;
+
   constructor(
     private taxonomyTreeService: TaxonomyTreeService
   ) { }
@@ -90,6 +92,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     let t: Taxon[] = this.taxonomyTreeService.setViewPort(tax_id);
     this.pathToRoot = t;
     this.taxonomyTree = t[t.length - 1];
+    this.taxonomyTree = this.taxonomyTreeService.cutScores(this.taxonomyTree, 1);
     this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
     this.currentNode = this.taxonomyTree;
     this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth * (2 / 3), this.canvasOffset.x, this.canvasOffset.y, this.screenWidth * (1 / 6));
@@ -106,9 +109,8 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   }
 
   showPathogenic(tax_id: number): void {
-    this.taxonomyTree = this.taxonomyTreeService.filterTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
-    // this.taxonomyTree = this.taxonomyTreeService.filterPathogenic(this.minReads, this.sigLevel, this.minOddsRatio);
-    // this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
+    this.taxonomyTree = this.taxonomyTreeService.filterPathogenic(this.minReads, this.sigLevel, this.minOddsRatio);
+    this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
     this.pathToRoot = [this.taxonomyTree];
     this.currentNode = this.taxonomyTree;
     this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth * (2 / 3), this.canvasOffset.x, this.canvasOffset.y, this.screenWidth * (1 / 12));
@@ -173,13 +175,44 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       } else {
         continue;
       }
+      if(d.data.over_threshold[i]==1){
+        continue;
+      }
       this.cx.beginPath();
       this.cx.moveTo(start_x + (this.heatmap.square_size * i), start_y - (this.heatmap.square_size / 2));
       this.cx.rect(start_x + (this.heatmap.square_size * i), start_y - (this.heatmap.square_size / 2), this.heatmap.square_size, this.heatmap.square_size);
       this.cx.fill();
-      this.cx.strokeStyle = "#000000";
+      this.cx.strokeStyle = "#696969";
       this.cx.stroke();
       this.cx.closePath();
+      this.cx.lineWidth = 1;
+      this.cx.strokeStyle = "#000000";
+    }
+    for (var i = 0; i < d.data[key].length; i++) {
+      if (d.children == null) {
+        this.cx.fillStyle = this.scales[key][1](d.data[key][i]);
+      } else if (d.children.every(function(x) { return (x.children == null); })) {
+        this.cx.fillStyle = this.scales[key][0](d.data[key][i]);
+      } else {
+        continue;
+      }
+      if(d.data.over_threshold[i]==0){
+        continue;
+      }
+      this.cx.beginPath();
+      this.cx.moveTo(start_x + (this.heatmap.square_size * i), start_y - (this.heatmap.square_size / 2));
+      this.cx.rect(start_x + (this.heatmap.square_size * i), start_y - (this.heatmap.square_size / 2), this.heatmap.square_size, this.heatmap.square_size);
+      this.cx.fill();
+      if(d.data.over_threshold[i]==1){
+        this.cx.lineWidth = 2;
+        this.cx.strokeStyle = "#000000";
+      }else{
+        this.cx.strokeStyle = "#696969";
+      }
+      this.cx.stroke();
+      this.cx.closePath();
+      this.cx.lineWidth = 1;
+      this.cx.strokeStyle = "#000000";
     }
   }
 
@@ -334,6 +367,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     this.cx.clearRect(0, 0, this.screenWidth * (2 / 3), this.screenHeight);
     this.canvasWrapper.selectAll("custom-link").each(function(d) {
       let _link: Selection<any, any, any, any> = d3.select(this);
+      _this.cx.strokeStyle = "#000000";
       _this.cx.beginPath();
       sx = parseFloat(_link.attr("sx"));
       sy = parseFloat(_link.attr("sy"));

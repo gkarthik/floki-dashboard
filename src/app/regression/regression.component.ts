@@ -54,7 +54,7 @@ export class RegressionComponent implements AfterViewInit, OnInit  {
     this.jsonData = this.regressionService.cutScores(this.jsonData, this.scoreThreshold, this.selectedSample);
     let currentPoints = this.regressionService.prepareAnalysis(this.jsonData, this.selectedSample, this.selectedTaxon);
     this.updateplot(currentPoints);
-    this.regressionService.train(this.jsonData, currentPoints).then(currentPoints=>{this.updateplot(currentPoints[0]),this.updateline(currentPoints[0],currentPoints[1])});
+    this.regressionService.train(this.jsonData, currentPoints).then(currentPoints=>{this.updateplot(currentPoints[0]),this.updateline(currentPoints[0],currentPoints[1],currentPoints[2])});
   }
 
   initializePlot(){
@@ -170,6 +170,24 @@ export class RegressionComponent implements AfterViewInit, OnInit  {
         .style("font-size", "20px")
         .attr("transform", "rotate(-90)")
         .text("Sample Reads");
+
+    svg.append("text")
+        .attr("text-anchor", "end")
+        .attr("id", "aboveline")
+        .attr("transform", "translate("+ (canvas_width*0.88) +","+ 50+")")
+        .style("font-size", "15px");
+
+    svg.append("text")
+        .attr("text-anchor", "end")
+        .attr("id", "online")
+        .attr("transform", "translate("+ (canvas_width*0.88) +","+ 70+")")
+        .style("font-size", "15px");
+
+    svg.append("text")
+        .attr("text-anchor", "end")
+        .attr("id", "belowline")
+        .attr("transform", "translate("+ (canvas_width*0.88) +","+ 90+")")
+        .style("font-size", "15px");
   }
 
   updateplot(current:[]){
@@ -254,7 +272,12 @@ export class RegressionComponent implements AfterViewInit, OnInit  {
                 return '#000000';
               }
             })
-            .on("mouseover", function(d){d3.select(this).style("cursor", "pointer"); return tooltip.style("visibility", "visible").html(d[2]+"<br/>"+"Control reads: "+ Math.round(Math.pow(10,d[0]))+"<br/>"+"Sample reads: "+Math.round(Math.pow(10,d[1])));})
+            .on("mouseover", function(d){d3.select(this).style("cursor", "pointer");
+            if(d[4]){
+              return tooltip.style("visibility", "visible").html(d[2]+"<br/>"+"Control reads: "+ Math.round(Math.pow(10,d[0]))+"<br/>"+"Sample reads: "+Math.round(Math.pow(10,d[1]))+"<br/>"+"known pathogen");
+            }else {
+              return tooltip.style("visibility", "visible").html(d[2]+"<br/>"+"Control reads: "+ Math.round(Math.pow(10,d[0]))+"<br/>"+"Sample reads: "+Math.round(Math.pow(10,d[1])))
+            };})
             .on("mousemove", function(){return tooltip.style("top",(d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
             .on("mouseout", function(){d3.select(this).style("cursor", "default"); return tooltip.style("visibility", "hidden");})
             .style("fill",
@@ -311,7 +334,12 @@ export class RegressionComponent implements AfterViewInit, OnInit  {
             return '#000000';
           }
         })
-        .on("mouseover", function(d){d3.select(this).style("cursor", "pointer"); return tooltip.style("visibility", "visible").html(d[2]+"<br/>"+"Control reads: "+ Math.round(Math.pow(10,d[0]))+"<br/>"+"Sample reads: "+Math.round(Math.pow(10,d[1])));})
+        .on("mouseover", function(d){d3.select(this).style("cursor", "pointer");
+        if(d[4]){
+          return tooltip.style("visibility", "visible").html(d[2]+"<br/>"+"Control reads: "+ Math.round(Math.pow(10,d[0]))+"<br/>"+"Sample reads: "+Math.round(Math.pow(10,d[1]))+"<br/>"+"known pathogen");
+        }else {
+          return tooltip.style("visibility", "visible").html(d[2]+"<br/>"+"Control reads: "+ Math.round(Math.pow(10,d[0]))+"<br/>"+"Sample reads: "+Math.round(Math.pow(10,d[1])))
+        };})
         .on("mousemove", function(){return tooltip.style("top",(d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
         .on("mouseout", function(){d3.select(this).style("cursor", "default"); return tooltip.style("visibility", "hidden");});
         // .transition()
@@ -347,9 +375,24 @@ export class RegressionComponent implements AfterViewInit, OnInit  {
     svg.select("#ylabel")
         .text(this.selectedSample+" Reads");
 
+    svg.select("#aboveline")
+        .attr("text-anchor", "end")
+        .attr("transform", "translate("+ (canvas_width*0.88) +","+ 50+")")
+        .style("font-size", "15px")
+        .text("Analyzing. . .");
+    svg.select("#online")
+        .attr("text-anchor", "end")
+        .attr("transform", "translate("+ (canvas_width*0.88) +","+ 70+")")
+        .style("font-size", "15px")
+        .text("");
+    svg.select("#belowline")
+        .attr("text-anchor", "end")
+        .attr("transform", "translate("+ (canvas_width*0.88) +","+ 90+")")
+        .style("font-size", "15px")
+        .text("");
   }
 
-  updateline(current:[],cline:[]){
+  updateline(current:[],cline:[], predicted:[]){
     let padding = 50;
     let canvas_width = 800;
     let canvas_height = 500;
@@ -385,6 +428,22 @@ export class RegressionComponent implements AfterViewInit, OnInit  {
       //   .delay(500)
       //   .duration(1500)
         .style('stroke', "#FF4533");
+
+    svg.select("#aboveline")
+        .attr("text-anchor", "end")
+        .attr("transform", "translate("+ (canvas_width*0.88) +","+ 50+")")
+        .style("font-size", "15px")
+        .text("In sample: "+predicted[2]);
+    svg.select("#online")
+        .attr("text-anchor", "end")
+        .attr("transform", "translate("+ (canvas_width*0.88) +","+ 70+")")
+        .style("font-size", "15px")
+        .text("Contaminants: "+predicted[1]);
+    svg.select("#belowline")
+        .attr("text-anchor", "end")
+        .attr("transform", "translate("+ (canvas_width*0.88) +","+ 90+")")
+        .style("font-size", "15px")
+        .text("Background: "+predicted[0]);
   }
 
 }
