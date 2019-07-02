@@ -225,12 +225,11 @@ export class RegressionService {
         this.pointCounts[0] += 1
       }
     }
-    document.getElementById("h1").innerHTML = '&nbsp';
+    // document.getElementById("h1").innerHTML = '&nbsp';
 
     // return [this.predictedPoints, this.pointCounts];
     return [current, this.predictedPoints, this.pointCounts];
   }
-
   // learningModel(d: Taxon, sample: string, taxon: string) {
   //   document.getElementById("h1").innerHTML = "Analyzing . . .";
   //   this.selectedSample = sample;
@@ -249,7 +248,6 @@ export class RegressionService {
     "name": string,
     "pathogenic": number
   }] {
-    document.getElementById("h1").innerHTML = "Analyzing . . .";
     this.selectedSample = sample;
     this.selectedTaxon = taxon;
     let data = _.cloneDeep(this.jsonData);

@@ -41,6 +41,7 @@ export class TaxonomyTreeService {
 
   cutScores(d: Taxon, threshold: number){
     this.scoreCut(d,threshold);
+    // this.sumTaxReads(d);
     return d;
   }
 
@@ -71,35 +72,28 @@ export class TaxonomyTreeService {
         }
       }
     }
+    if(d.children){
       for (let i = 0; i < d.children.length; i++) {
         this.scoreCut(d.children[i], threshold);
       }
+    }
   }
-  // scoreCut(d: Taxon, threshold: number){
-  //   for (let j = 0; j < d.file.length; j++) {
-  //     let cutreads = null;
-  //     cutreads = 0;
-  //     let scorearray = null;
-  //     scorearray = d.forward_score_distribution[j].split(",")
-  //     for (let k = 0; k < 10; k++) {
-  //       if(((k/10) + 0.1)< threshold){
-  //         // cutreads += d.forward_score_distribution[j][k]
-  //         if(d.taxon_reads[j]-scorearray[k] < 0){
-  //          d.taxon_reads[j] = 0;
-  //        }
-  //         if(d.taxon_reads[j]-scorearray[k] < 0){
-  //           d.taxon_reads[j] = 0;
-  //         }else {
-  //           d.taxon_reads[j] = d.taxon_reads[j]-scorearray[k];
-  //         }
-  //       }
-  //     }
-  //     // console.log(cutreads);
-  //   }
-  //     for (let i = 0; i < d.children.length; i++) {
-  //       this.scoreCut(d.children[i], threshold);
-  //     }
-  // }
+
+  sumTaxReads(d: Taxon){
+    var childreads = []
+    if(d.children){
+      for (let i = 0; i < d.children.length; i++) {
+        childreads = this.sumTaxReads(d.children[i]);
+      }
+    }else{
+      childreads = Array(12).fill(0);
+    }
+    console.log(childreads);
+    for (let j = 0; j < d.file.length; j++) {
+      d.taxon_reads[j] = d.reads[j]+childreads[j]
+    }
+    return d.taxon_reads
+  }
 
   getLayout(data: Taxon, height: number, width: number, offsetX: number, offsetY: number, depth: number): HierarchyPointNode<Taxon>[] {
     let root = d3.hierarchy(data, function(d) { return d.children; });
@@ -118,64 +112,77 @@ export class TaxonomyTreeService {
     return nodes;
   }
 
-  filterTreeRank(d: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
-    let cond = [], keep_node: boolean = false, tmp, _this = this;
-
-    // Minimum number of reads
-    keep_node = d.taxon_reads.some(function(x) {
-      return x >= minReads;
-    });
-    cond.push(keep_node);
-    // Maximum pvalue
-    keep_node = d.pvalue.some(function(x) {
-      return x <= sigLevel;
-    });
-    cond.push(keep_node);
-    // Minimum odds ratio
-    keep_node = d.oddsratio.some(function(x) {
-      return x >= minOddsRatio;
-    });
-    cond.push(keep_node);
-    keep_node = (d.rank != 'no rank');
-    cond.push(keep_node);
-    keep_node = cond.every(function(x) {
-      return x;
-    });
-    cond = [keep_node];
-    if (d.children != null) {
-      for (var i = 0; i < d.children.length; i++) {
-        tmp = this.filterTreeRank(d.children[i], minReads, sigLevel, minOddsRatio);
-        cond.push(tmp);
-        if (!tmp) {
-          d.children.splice(i, 1);
-          i--;
-        }
-      }
-    }
-    keep_node = cond.some(function(x) {
-      return x;
-    });
-    return keep_node;
-  }
+  // filterTreeRank(d: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
+  //   let cond = [], keep_node: boolean = false, tmp, _this = this;
+  //
+  //   // Minimum number of reads
+  //   keep_node = d.taxon_reads.some(function(x) {
+  //     return x >= minReads;
+  //   });
+  //   cond.push(keep_node);
+  //   // Maximum pvalue
+  //   keep_node = d.pvalue.some(function(x) {
+  //     return x <= sigLevel;
+  //   });
+  //   cond.push(keep_node);
+  //   // Minimum odds ratio
+  //   keep_node = d.oddsratio.some(function(x) {
+  //     return x >= minOddsRatio;
+  //   });
+  //   cond.push(keep_node);
+  //   keep_node = (d.rank != 'no rank');
+  //   cond.push(keep_node);
+  //   keep_node = cond.every(function(x) {
+  //     return x;
+  //   });
+  //   cond = [keep_node];
+  //   if (d.children != null) {
+  //     for (var i = 0; i < d.children.length; i++) {
+  //       tmp = this.filterTreeRank(d.children[i], minReads, sigLevel, minOddsRatio);
+  //       cond.push(tmp);
+  //       if (!tmp) {
+  //         d.children.splice(i, 1);
+  //         i--;
+  //       }
+  //     }
+  //   }
+  //   keep_node = cond.some(function(x) {
+  //     return x;
+  //   });
+  //   return keep_node;
+  // }
 
   filterTaxonomyTree(d: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
     let cond = [], keep_node: boolean = false, tmp, _this = this;
-
+    // var a = [1,2,3,4]
+    // var t = a.map(x=>x>5)
+    // console.log(t)
+    // console.log(t.some(x=>x))
+    let thresholdarr = []
     // Minimum number of reads
-    keep_node = d.taxon_reads.some(function(x) {
-      return x >= minReads;
-    });
-    cond.push(keep_node);
+    let t = d.taxon_reads.map(x=>x>=minReads)
+    cond.push(t.some(x=>x))
+    thresholdarr[0]=t;
     // Maximum pvalue
-    keep_node = d.pvalue.some(function(x) {
-      return x <= sigLevel;
-    });
-    cond.push(keep_node);
+    let t = d.pvalue.map(x=>x<=sigLevel)
+    cond.push(t.some(x=>x))
+    thresholdarr[1]=t;
     // Minimum odds ratio
-    keep_node = d.oddsratio.some(function(x) {
-      return x >= minOddsRatio;
-    });
-    cond.push(keep_node);
+    let t = d.oddsratio.map(x=>x>=minOddsRatio)
+    cond.push(t.some(x=>x))
+    thresholdarr[2]=t;
+
+    let t = []
+    for (i = 0; i < d.file.length; i++){
+      if([thresholdarr[0][i],thresholdarr[1][i],thresholdarr[2][i]].every(x=>x)){
+        t.push(1)
+      }else{
+        t.push(0)
+      }
+    }
+
+    d.over_threshold=t;
+
     keep_node = cond.every(function(x) {
       return x;
     });
@@ -235,24 +242,24 @@ export class TaxonomyTreeService {
     return keep_node;
   }
 
-  compressNodesRank(d: Taxon): void {
-    if (d.rank != 'no rank' && d.depth>1) {
-      while (d.children.some(function(x) { return (x.rank == 'no rank'); })) {
-        for (var i = 0; i < d.children.length; i++) {
-          if (d.children[i].rank == 'no rank') {
-            if (d.children[i].children != null)
-              d.children = d.children.concat(d.children[i].children);
-            d.children.splice(i, 1);
-            // d.num_nodes += 1;
-            i--;
-          }
-        }
-      }
-    }
-    for (var i = 0; i < d.children.length; i++) {
-      this.compressNodesRank(d.children[i]);
-    }
-  }
+  // compressNodesRank(d: Taxon): void {
+  //   if (d.rank != 'no rank' && d.depth>1) {
+  //     while (d.children.some(function(x) { return (x.rank == 'no rank'); })) {
+  //       for (var i = 0; i < d.children.length; i++) {
+  //         if (d.children[i].rank == 'no rank') {
+  //           if (d.children[i].children != null)
+  //             d.children = d.children.concat(d.children[i].children);
+  //           d.children.splice(i, 1);
+  //           // d.num_nodes += 1;
+  //           i--;
+  //         }
+  //       }
+  //     }
+  //   }
+  //   for (var i = 0; i < d.children.length; i++) {
+  //     this.compressNodesRank(d.children[i]);
+  //   }
+  // }
 
   compressNodesBasedOnAnnotation(d: Taxon, key: string): void {
     if (d[key] == 0 && d.depth > 1) {
@@ -343,12 +350,12 @@ export class TaxonomyTreeService {
     }
   }
 
-  filterTree(d: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
-    let data = _.cloneDeep(this.jsonData);
-    this.filterTreeRank(data, minReads, sigLevel, minOddsRatio);
-    this.compressNodesRank(data);
-    return data;
-  }
+  // filterRanks(d: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
+  //   let data = _.cloneDeep(this.jsonData);
+  //   this.filterTreeRank(data, minReads, sigLevel, minOddsRatio);
+  //   this.compressNodesRank(data);
+  //   return data;
+  // }
 
   filterPathogenic(minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
     let data = _.cloneDeep(this.jsonData);

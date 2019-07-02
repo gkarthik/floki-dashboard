@@ -59,9 +59,8 @@ export class RegressionComponent implements AfterViewInit, OnInit {
     this.regressionService.getTree().subscribe(_ => { this.jsonData = _; });
     this.jsonData = this.regressionService.cutScores(this.jsonData, this.scoreThreshold, this.selectedSample);
     this.regressionService.prepareAnalysis(this.selectedSample, this.selectedTaxon); // Sets current points in service
-    let currentPoints = this.regressionService.getCurrentPoints()
-    this.updateplot(currentPoints);
-    this.regressionService.train(this.jsonData).then(currentPoints => { this.updateplot(currentPoints), this.updateline(currentPoints, currentPoints[1]) });
+    this.updateplot();
+    this.regressionService.train(this.jsonData).then(currentPoints => { this.updateplot(), this.updateline() });
   }
 
   initializePlot() {
@@ -134,15 +133,28 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .style("font-size", "20px")
       .attr("transform", "rotate(-90)")
       .text("Sample Reads");
+
+    svg.append("text")
+      .attr("text-anchor", "end")
+      .attr("id", "aboveline")
+      .attr("transform", "translate(" + (this.canvas_width * 0.88) + "," + 50 + ")")
+      .style("font-size", "15px");
+
+    svg.append("text")
+      .attr("text-anchor", "end")
+      .attr("id", "online")
+      .attr("transform", "translate(" + (this.canvas_width * 0.88) + "," + 70 + ")")
+      .style("font-size", "15px");
+
+    svg.append("text")
+      .attr("text-anchor", "end")
+      .attr("id", "belowline")
+      .attr("transform", "translate(" + (this.canvas_width * 0.88) + "," + 90 + ")")
+      .style("font-size", "15px");
   }
 
-  updateplot(current: [{
-    "control": number,
-    "sample": number,
-    "node_pos": number,
-    "name": string,
-    "pathogenic": number
-  }]) {
+  updateplot() {
+    let current = this.regressionService.getCurrentPoints();
     let svg = d3.select("svg");
 
     svg.select("#regression_line").style('stroke', '#fff');
@@ -218,7 +230,14 @@ export class RegressionComponent implements AfterViewInit, OnInit {
           return '#000000';
         }
       })
-      .on("mouseover", function(d) { d3.select(this).style("cursor", "pointer"); return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control)) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample))); })
+      .on("mouseover", function(d) {
+        d3.select(this).style("cursor", "pointer");
+        if (d.pathogenic) {
+          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control)) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample)) + "<br/>" + "known pathogen");
+        } else {
+          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control)) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample)));
+        }
+      })
       .on("mousemove", function() { return tooltip.style("top", (d3.event.pageY - 10) + "px").style("left", (d3.event.pageX + 10) + "px"); })
       .on("mouseout", function() { d3.select(this).style("cursor", "default"); return tooltip.style("visibility", "hidden"); })
       .style("fill",
@@ -261,33 +280,9 @@ export class RegressionComponent implements AfterViewInit, OnInit {
             return "#f4aa4e";
           }
         })
-      .attr("stroke-width", function(d) {
-        if (d.pathogenic) {
-          return 2;
-        } else {
-          return 0.6;
-        }
-      })
-      .style("stroke", function(d) {
-        if (d.pathogenic) {
-          return '#E04836';
-        } else {
-          return '#000000';
-        }
-      })
-      .on("mouseover", function(d) { d3.select(this).style("cursor", "pointer"); return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control)) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample))); })
-      .on("mousemove", function() { return tooltip.style("top", (d3.event.pageY - 10) + "px").style("left", (d3.event.pageX + 10) + "px"); })
-      .on("mouseout", function() { d3.select(this).style("cursor", "default"); return tooltip.style("visibility", "hidden"); });
-    // .transition()
-    // .duration(1000)
-    // .attr("y", 0)
-    // .style("fill-opacity", 1);
 
     circle.exit()
       .attr("class", "exit")
-      // .transition()
-      // .duration(1000)
-      // .attr("cy", 0)
       .remove();
 
     var xAxis = d3.axisBottom(xLScale)
@@ -305,15 +300,25 @@ export class RegressionComponent implements AfterViewInit, OnInit {
     svg.select("#ylabel")
       .text(this.selectedSample + " Reads");
 
+    svg.select("#aboveline")
+      .attr("text-anchor", "end")
+      .attr("transform", "translate(" + (this.canvas_width * 0.88) + "," + 50 + ")")
+      .style("font-size", "15px")
+      .text("Analyzing. . .");
+    svg.select("#online")
+      .attr("text-anchor", "end")
+      .attr("transform", "translate(" + (this.canvas_width * 0.88) + "," + 70 + ")")
+      .style("font-size", "15px")
+      .text("");
+    svg.select("#belowline")
+      .attr("text-anchor", "end")
+      .attr("transform", "translate(" + (this.canvas_width * 0.88) + "," + 90 + ")")
+      .style("font-size", "15px")
+      .text("");
   }
 
-  updateline(current: [{
-    "control": number,
-    "sample": number,
-    "node_pos": number,
-    "name": string,
-    "pathogenic": number
-  }], cline: []) {
+  updateline() {
+    let current = this.regressionService.getCurrentPoints();
     let padding = 50;
     let canvas_width = 800;
     let canvas_height = 500;
@@ -339,12 +344,28 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .curve(d3.curveMonotoneX);
 
     svg.select("#regression_line")
-      .datum(cline)
+      .datum(current.map(x => x.predicted))
       .attr("d", line)
       .attr("stroke-width", 2)
       .style("stroke-dasharray", ("3, 3"))
       .style('fill', 'none')
       .style('stroke', "#FF4533");
+
+    svg.select("#aboveline")
+      .attr("text-anchor", "end")
+      .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 50 + ")")
+      .style("font-size", "15px")
+      .text("In sample: " + predicted[2]);
+    svg.select("#online")
+      .attr("text-anchor", "end")
+      .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 70 + ")")
+      .style("font-size", "15px")
+      .text("Contaminants: " + predicted[1]);
+    svg.select("#belowline")
+      .attr("text-anchor", "end")
+      .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 90 + ")")
+      .style("font-size", "15px")
+      .text("Background: " + predicted[0]);
   }
 
 }
