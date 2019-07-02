@@ -18,7 +18,7 @@ export class AnnotationService {
 
   private jsonData: AntibioticResistance[];
 
-  private handleError<T> (operation = 'operation', result?: T) {
+  private handleError<T>(operation = 'operation', result?: T) {
     return (error: any): Observable<T> => {
       console.error(error);
       console.log(`${operation} failed: ${error.message}`);
@@ -29,8 +29,8 @@ export class AnnotationService {
   getJson(): Observable<any> {
     return this.http.get<any>(this.reportUrl)
       .pipe(
-	tap(d => this.jsonData = d),
-	catchError(this.handleError('getJson', []))
+        tap(d => this.jsonData = d),
+        catchError(this.handleError('getJson', []))
       );
   }
 

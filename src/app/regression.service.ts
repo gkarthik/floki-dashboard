@@ -25,7 +25,6 @@ export class RegressionService {
     "node_pos": number,
     "pathogenic": number
   }];
-  private predictedPoints: number[];
   private pointCounts: number[];
   // Sample data elements
   // 0 - control reads
@@ -142,7 +141,13 @@ export class RegressionService {
   }
 
   arrangePoints() {
-    this.currentPoints = [];
+    this.currentPoints = Array() as [{
+      "control": number,
+      "sample": number,
+      "name": string,
+      "node_pos": number,
+      "pathogenic": number
+    }];
     this.logcontrolreads = [];
     this.logtaxonreads = [];
     for (let j = 0; j < this.sampleData.control.length; j++) {
@@ -158,77 +163,47 @@ export class RegressionService {
     };
   }
 
-  async train(d: Taxon) {
+  async trainAndPredict(d: Taxon) {
 
     // this.linearModel = tf.sequential();
     // this.linearModel.add(tf.layers.dense({ units: 1, inputShape: [1] }));
     // this.linearModel.add(tf.layers.dense({ units: 1 }));
     // this.linearModel.compile({ loss: 'meanSquaredError', optimizer: 'adam' });
 
-    const xs = tf.data.generator(this.logcontrolreads);
-    const ys = tf.data.generator(this.logtaxonreads);
-    const ds = tf.data.zip({ xs, ys }).shuffle(100).batch(32);
-
+    const xs = tf.data.array(this.logcontrolreads);
+    const ys = tf.data.array(this.logtaxonreads);
+    const ds = tf.data.zip({ x: xs, y: ys }).shuffle(100).batch(32);
     const learningRate = 0.01;
     const optimizer = tf.train.sgd(learningRate);
-
+    // Init slope and intercept
     const m = tf.scalar(Math.random()).variable();
     const c = tf.scalar(Math.random()).variable();
-
-    const numSteps = 100;
-
     // y = mx+c
     const model = x => m.mul(x).add(c);
     const loss = (pred, label) => pred.sub(label).square().mean();
 
-    for (let epoch = 0; epoch < 5; epoch++) {
-      await ds.forEachAsync(({ xs, ys }) => {
-        optimizer.minimize(() => loss(model(xs), ys));
+    for (let epoch = 0; epoch < 100; epoch++) {
+      await ds.forEachAsync(({ x, y }) => {
+        optimizer.minimize(() => {
+          const predYs = model(x);
+          const l = loss(y, predYs);
+          // l.data().then(_ => console.log('Loss', _));
+          return l;
+        });
       });
-      console.log('Epoch', epoch);
     }
-
-    // await this.linearModel.fit(xs, ys, { "batchSize": 32, "epochs": 120 });
-
-    const preds = [];
-    const predictedPointsD = []
-    this.predictedPoints = []
-    for (let j = 1; j < d3.max(this.sampleData[this.selectedSample][0]); j += (d3.max(this.sampleData[this.selectedSample][0]) / 10)) {
-      let output = model(Math.log10(j));
-      let prediction = Array.from(output.dataSync())[0]
-      preds.push(prediction);
-      predictedPointsD.push({ x: Math.log10(j), y: prediction });
-      this.predictedPoints.push({ x: Math.log10(j), y: prediction })
+    let test_x: number[] = [];
+    for (let i = Math.min.apply(null, this.logcontrolreads); i < Math.max.apply(null, this.logcontrolreads); i++) {
+      test_x.push(0.5 * i);
     }
-
-    let comparingPoints = [];
-    for (let j = 0; j < this.sampleData[this.selectedSample][0].length; j++) {
-      let output = model.predict(tf.tensor2d([current[j][0]], [1, 1])) as any;
-      let prediction = Array.from(output.dataSync())[0]
-      if (isNaN(prediction)) {
-        comparingPoints.push(0);
-      } else {
-        comparingPoints.push(prediction);
-      }
-    }
-
-    this.pointCounts = [0, 0, 0]
-    for (let j = 0; j < this.sampleData[this.selectedSample][0].length; j++) {
-      if (current[j][1] > comparingPoints[j]) {
-        current[j][3] = 2;
-        this.pointCounts[2] += 1
-      } else if (Math.round(Math.pow(10, current[j][1])) == Math.round(Math.pow(10, comparingPoints[j]))) {
-        current[j][3] = 1;
-        this.pointCounts[1] += 1
-      } else {
-        this.pointCounts[0] += 1
-      }
-    }
-    // document.getElementById("h1").innerHTML = '&nbsp';
-
-    // return [this.predictedPoints, this.pointCounts];
-    return [current, this.predictedPoints, this.pointCounts];
+    let pred_y = model(tf.tensor(test_x)).dataSync();
+    let predictions: number[][] = [];
+    await pred_y.forEach((pred, i) => {
+      predictions.push([test_x[i], pred]);
+    });
+    return predictions;
   }
+
   // learningModel(d: Taxon, sample: string, taxon: string) {
   //   document.getElementById("h1").innerHTML = "Analyzing . . .";
   //   this.selectedSample = sample;
@@ -254,10 +229,4 @@ export class RegressionService {
     this.arrangePoints();
     return this.currentPoints;
   }
-
-  // runPrediction(d: Taxon, sample: string, taxon: string){
-  //   let data = _.cloneDeep(this.jsonData);
-  //   this.train(data, this.sampleData);
-  // }
-
 }

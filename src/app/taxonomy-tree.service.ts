@@ -39,21 +39,22 @@ export class TaxonomyTreeService {
       );
   }
 
-  cutScores(d: Taxon, threshold: number){
-    this.cutScoresNode(d,threshold);
+  cutScores(d: Taxon, threshold: number) {
+    this.cutScoresNode(d, threshold);
     this.sumTaxReads(d);
     return d;
   }
 
-  cutScoresNode(d: Taxon, threshold: number){
+
+  cutScoresNode(d: Taxon, threshold: number) {
     let ctrlscorearray = null;
     ctrlscorearray = d.ctrl_forward_score_distribution.split(",");
     for (let k = 0; k < 10; k++) {
-      if(((k/10) + 0.1)< threshold){
-        if(d.ctrl_reads-ctrlscorearray[k] <= 0 || isNaN(d.ctrl_reads-ctrlscorearray[k])){
+      if (((k / 10) + 0.1) < threshold) {
+        if (d.ctrl_reads - ctrlscorearray[k] <= 0 || isNaN(d.ctrl_reads - ctrlscorearray[k])) {
           d.ctrl_reads = 0;
-        }else {
-          d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k];
+        } else {
+          d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k]
         }
       }
     }
@@ -61,44 +62,46 @@ export class TaxonomyTreeService {
       let scorearray = null;
       scorearray = d.forward_score_distribution[j].split(",");
       for (let k = 0; k < 10; k++) {
-        if(((k/10) + 0.1)< threshold){
-          if(d.reads[j]-scorearray[k] < 0){
+        if (((k / 10) + 0.1) < threshold) {
+          if (d.reads[j] - scorearray[k] < 0) {
             d.reads[j] = 0;
-          }else {
-            d.reads[j] = d.reads[j]-scorearray[k];
+          } else {
+            d.reads[j] = d.reads[j] - scorearray[k];
           }
         }
       }
     }
-    for (let i = 0; i < d.children.length; i++) {
-      this.cutScoresNode(d.children[i], threshold);
+    if (d.children) {
+      for (let i = 0; i < d.children.length; i++) {
+        this.cutScoresNode(d.children[i], threshold);
+      }
     }
   }
 
-  sumTaxReads(d: Taxon){
-    let childreads = Array(d.file.length).fill(0);
-    let child_ctrlreads = 0;
-    if(d.children){
+  sumTaxReads(d: Taxon): number[][] {
+    let childreads: number[] = Array(12).fill(0);
+    let child_ctrlreads: number = 0;
+    if (d.children) {
       // childreads = childreads + d.children.forEach(this.sumTaxReads);
       for (let i = 0; i < d.children.length; i++) {
         let tmp = this.sumTaxReads(d.children[i])
-        childreads = tmp[0].map(function(num, idx){
+        childreads = tmp[0].map(function(num, idx) {
           return num + childreads[idx];
         })
         child_ctrlreads = child_ctrlreads + tmp[1];
       }
     }
     for (let j = 0; j < d.file.length; j++) {
-      if(isNaN(d.reads[j])){
-        d.taxon_reads[j] = childreads[j]+0
-      }else{
-        d.taxon_reads[j] = d.reads[j]+childreads[j]
+      if (isNaN(d.reads[j])) {
+        d.taxon_reads[j] = childreads[j] + 0
+      } else {
+        d.taxon_reads[j] = d.reads[j] + childreads[j]
       }
     }
-    if(isNaN(d.ctrl_taxon_reads)) {
-      d.ctrl_taxon_reads = 0+child_ctrlreads;
-    }else {
-      d.ctrl_taxon_reads = d.ctrl_reads+child_ctrlreads;
+    if (isNaN(d.ctrl_taxon_reads)) {
+      d.ctrl_taxon_reads = 0 + child_ctrlreads;
+    } else {
+      d.ctrl_taxon_reads = d.ctrl_reads + child_ctrlreads;
     }
     return [d.taxon_reads, d.ctrl_taxon_reads];
   }
@@ -177,28 +180,27 @@ export class TaxonomyTreeService {
     // console.log(t.some(x=>x))
     let thresholdarr = []
     // Minimum number of reads
-    let t = d.taxon_reads.map(x=>x>=minReads)
-    cond.push(t.some(x=>x))
-    thresholdarr[0]=t;
+    let t: boolean[] = d.taxon_reads.map(x => x >= minReads)
+    cond.push(t.some(x => x))
+    thresholdarr[0] = t;
     // Maximum pvalue
-    let t = d.pvalue.map(x=>x<=sigLevel)
-    cond.push(t.some(x=>x))
-    thresholdarr[1]=t;
+    t = d.pvalue.map(x => x <= sigLevel)
+    cond.push(t.some(x => x))
+    thresholdarr[1] = t;
     // Minimum odds ratio
-    let t = d.oddsratio.map(x=>x>=minOddsRatio)
-    cond.push(t.some(x=>x))
-    thresholdarr[2]=t;
-
-    let t = []
-    for (i = 0; i < d.file.length; i++){
-      if([thresholdarr[0][i],thresholdarr[1][i],thresholdarr[2][i]].every(x=>x)){
-        t.push(1)
-      }else{
-        t.push(0)
+    t = d.oddsratio.map(x => x >= minOddsRatio)
+    cond.push(t.some(x => x))
+    thresholdarr[2] = t;
+    let overThreshold: number[] = [];
+    for (i = 0; i < d.file.length; i++) {
+      if ([thresholdarr[0][i], thresholdarr[1][i], thresholdarr[2][i]].every(x => x)) {
+        overThreshold.push(1);
+      } else {
+        overThreshold.push(0);
       }
     }
 
-    d.over_threshold=t;
+    d.over_threshold = overThreshold;
 
     keep_node = cond.every(function(x) {
       return x;
@@ -238,27 +240,27 @@ export class TaxonomyTreeService {
     cond.push(keep_node);
 
     // Minimum number of reads
-    let t = d.taxon_reads.map(x=>x>=minReads)
-    cond.push(t.some(x=>x))
-    thresholdarr[0]=t;
+    let t = d.taxon_reads.map(x => x >= minReads)
+    cond.push(t.some(x => x))
+    thresholdarr[0] = t;
     // Maximum pvalue
-    let t = d.pvalue.map(x=>x<=sigLevel)
-    cond.push(t.some(x=>x))
-    thresholdarr[1]=t;
+    t = d.pvalue.map(x => x <= sigLevel)
+    cond.push(t.some(x => x))
+    thresholdarr[1] = t;
     // Minimum odds ratio
-    let t = d.oddsratio.map(x=>x>=minOddsRatio)
-    cond.push(t.some(x=>x))
-    thresholdarr[2]=t;
+    t = d.oddsratio.map(x => x >= minOddsRatio)
+    cond.push(t.some(x => x))
+    thresholdarr[2] = t;
 
-    let t = []
-    for (i = 0; i < d.file.length; i++){
-      if([thresholdarr[0][i],thresholdarr[1][i],thresholdarr[2][i]].every(x=>x)){
-        t.push(1)
-      }else{
-        t.push(0)
+    let overThreshold = [];
+    for (i = 0; i < d.file.length; i++) {
+      if ([thresholdarr[0][i], thresholdarr[1][i], thresholdarr[2][i]].every(x => x)) {
+        overThreshold.push(1);
+      } else {
+        overThreshold.push(0);
       }
     }
-    d.over_threshold=t;
+    d.over_threshold = overThreshold;
 
     keep_node = cond.every(function(x) {
       return x;
@@ -341,27 +343,27 @@ export class TaxonomyTreeService {
 
     let thresholdarr = []
     // Minimum number of reads
-    let t = d.taxon_reads.map(x=>x>=minReads)
-    cond.push(t.some(x=>x))
-    thresholdarr[0]=t;
+    let t = d.taxon_reads.map(x => x >= minReads)
+    cond.push(t.some(x => x))
+    thresholdarr[0] = t;
     // Maximum pvalue
-    let t = d.pvalue.map(x=>x<=sigLevel)
-    cond.push(t.some(x=>x))
-    thresholdarr[1]=t;
+    t = d.pvalue.map(x => x <= sigLevel)
+    cond.push(t.some(x => x))
+    thresholdarr[1] = t;
     // Minimum odds ratio
-    let t = d.oddsratio.map(x=>x>=minOddsRatio)
-    cond.push(t.some(x=>x))
-    thresholdarr[2]=t;
+    t = d.oddsratio.map(x => x >= minOddsRatio)
+    cond.push(t.some(x => x))
+    thresholdarr[2] = t;
 
-    let t = []
-    for (i = 0; i < d.file.length; i++){
-      if([thresholdarr[0][i],thresholdarr[1][i],thresholdarr[2][i]].every(x=>x)){
-        t.push(1)
-      }else{
-        t.push(0)
+    let overThreshold = []
+    for (i = 0; i < d.file.length; i++) {
+      if ([thresholdarr[0][i], thresholdarr[1][i], thresholdarr[2][i]].every(x => x)) {
+        overThreshold.push(1);
+      } else {
+        overThreshold.push(0);
       }
     }
-    d.over_threshold=t;
+    d.over_threshold = overThreshold;
 
     keep_node = cond.every(function(x) {
       return x;
@@ -442,9 +444,9 @@ export class TaxonomyTreeService {
     return path_to_root;
   }
 
-  setBiggerPort(): Taxon[] {
+  setBiggerPort(): Taxon {
     let data: Taxon = _.cloneDeep(this.jsonData);
-    return data
+    return data;
   }
 
   getRangeOfKeyAtDepth(_data: Taxon, key: string, depth: number, min?: number[], max?: number[]): [number[], number[]] {
