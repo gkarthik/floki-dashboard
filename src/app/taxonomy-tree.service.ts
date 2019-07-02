@@ -80,9 +80,9 @@ export class TaxonomyTreeService {
     }
   }
 
-  sumTaxReads(d: Taxon) {
-    let childreads = Array(12).fill(0);
-    let child_ctrlreads = 0;
+  sumTaxReads(d: Taxon): number[][] {
+    let childreads: number[] = Array(12).fill(0);
+    let child_ctrlreads: number = 0;
     if (d.children) {
       // childreads = childreads + d.children.forEach(this.sumTaxReads);
       for (let i = 0; i < d.children.length; i++) {
@@ -178,28 +178,27 @@ export class TaxonomyTreeService {
     // console.log(t.some(x=>x))
     let thresholdarr = []
     // Minimum number of reads
-    let t = d.taxon_reads.map(x => x >= minReads)
+    let t: boolean[] = d.taxon_reads.map(x => x >= minReads)
     cond.push(t.some(x => x))
     thresholdarr[0] = t;
     // Maximum pvalue
-    let t = d.pvalue.map(x => x <= sigLevel)
+    t = d.pvalue.map(x => x <= sigLevel)
     cond.push(t.some(x => x))
     thresholdarr[1] = t;
     // Minimum odds ratio
-    let t = d.oddsratio.map(x => x >= minOddsRatio)
+    t = d.oddsratio.map(x => x >= minOddsRatio)
     cond.push(t.some(x => x))
     thresholdarr[2] = t;
-
-    let t = []
+    let overThreshold: number[] = [];
     for (i = 0; i < d.file.length; i++) {
       if ([thresholdarr[0][i], thresholdarr[1][i], thresholdarr[2][i]].every(x => x)) {
-        t.push(1)
+        overThreshold.push(1);
       } else {
-        t.push(0)
+        overThreshold.push(0);
       }
     }
 
-    d.over_threshold = t;
+    d.over_threshold = overThreshold;
 
     keep_node = cond.every(function(x) {
       return x;
@@ -235,23 +234,23 @@ export class TaxonomyTreeService {
     cond.push(t.some(x => x))
     thresholdarr[0] = t;
     // Maximum pvalue
-    let t = d.pvalue.map(x => x <= sigLevel)
+    t = d.pvalue.map(x => x <= sigLevel)
     cond.push(t.some(x => x))
     thresholdarr[1] = t;
     // Minimum odds ratio
-    let t = d.oddsratio.map(x => x >= minOddsRatio)
+    t = d.oddsratio.map(x => x >= minOddsRatio)
     cond.push(t.some(x => x))
     thresholdarr[2] = t;
 
-    let t = []
+    let overThreshold = [];
     for (i = 0; i < d.file.length; i++) {
       if ([thresholdarr[0][i], thresholdarr[1][i], thresholdarr[2][i]].every(x => x)) {
-        t.push(1)
+        overThreshold.push(1);
       } else {
-        t.push(0)
+        overThreshold.push(0);
       }
     }
-    d.over_threshold = t;
+    d.over_threshold = overThreshold;
 
     keep_node = cond.every(function(x) {
       return x;
@@ -330,23 +329,23 @@ export class TaxonomyTreeService {
     cond.push(t.some(x => x))
     thresholdarr[0] = t;
     // Maximum pvalue
-    let t = d.pvalue.map(x => x <= sigLevel)
+    t = d.pvalue.map(x => x <= sigLevel)
     cond.push(t.some(x => x))
     thresholdarr[1] = t;
     // Minimum odds ratio
-    let t = d.oddsratio.map(x => x >= minOddsRatio)
+    t = d.oddsratio.map(x => x >= minOddsRatio)
     cond.push(t.some(x => x))
     thresholdarr[2] = t;
 
-    let t = []
+    let overThreshold = []
     for (i = 0; i < d.file.length; i++) {
       if ([thresholdarr[0][i], thresholdarr[1][i], thresholdarr[2][i]].every(x => x)) {
-        t.push(1)
+        overThreshold.push(1);
       } else {
-        t.push(0)
+        overThreshold.push(0);
       }
     }
-    d.over_threshold = t;
+    d.over_threshold = overThreshold;
 
     keep_node = cond.every(function(x) {
       return x;
@@ -427,9 +426,9 @@ export class TaxonomyTreeService {
     return path_to_root;
   }
 
-  setBiggerPort(): Taxon[] {
+  setBiggerPort(): Taxon {
     let data: Taxon = _.cloneDeep(this.jsonData);
-    return data
+    return data;
   }
 
   getRangeOfKeyAtDepth(_data: Taxon, key: string, depth: number, min?: number[], max?: number[]): [number[], number[]] {
