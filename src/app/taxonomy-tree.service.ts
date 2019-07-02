@@ -19,6 +19,8 @@ export class TaxonomyTreeService {
   private reportUrl = "./assets/json-reports/test.json";
   private jsonData: Taxon = new Taxon();
 
+  private rootReads: number[][];
+
   constructor(
     private http: HttpClient
   ) { }
@@ -42,6 +44,7 @@ export class TaxonomyTreeService {
   cutScores(d: Taxon, threshold: number) {
     this.cutScoresNode(d, threshold);
     this.sumTaxReads(d);
+    this.rootReads = [d.taxon_reads,[d.ctrl_taxon_reads]];
     return d;
   }
 
@@ -163,15 +166,15 @@ export class TaxonomyTreeService {
   //   return keep_node;
   // }
 
-  filterTaxonomyTree(d: Taxon, rootreads: number[], minReads: number, sigLevel: number, minOddsRatio: number): boolean {
+  filterTaxonomyTree(d: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
     let cond = [], keep_node: boolean = false, tmp, _this = this;
-
-    d.ctrl_percentage = d.ctrl_taxon_reads/rootreads[1];
+    let rootReads = this.rootReads;
+    d.ctrl_percentage = d.ctrl_taxon_reads/rootReads[1][0];
     d.percentage = d.taxon_reads.map(function(x,idx){
-      if(isNaN(x/rootreads[0][idx])){
+      if(isNaN(x/rootReads[0][idx])){
         return 0;
       }else{
-        return x/rootreads[0][idx];
+        return x/rootReads[0][idx];
       }
     });
     // var a = [1,2,3,4]
@@ -208,7 +211,7 @@ export class TaxonomyTreeService {
     cond = [keep_node];
     if (d.children != null) {
       for (var i = 0; i < d.children.length; i++) {
-        tmp = this.filterTaxonomyTree(d.children[i], rootreads, minReads, sigLevel, minOddsRatio);
+        tmp = this.filterTaxonomyTree(d.children[i], minReads, sigLevel, minOddsRatio);
         cond.push(tmp);
         if (!tmp) {
           d.children.splice(i, 1);
@@ -222,15 +225,15 @@ export class TaxonomyTreeService {
     return keep_node;
   }
 
-  filterBasedOnAnnotations(d: Taxon, rootreads: number[], key: string, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
+  filterBasedOnAnnotations(d: Taxon, key: string, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
     let cond = [], keep_node: boolean = false, tmp, _this = this;
-
-    d.ctrl_percentage = d.ctrl_taxon_reads/rootreads[1];
+    let rootReads = this.rootReads;
+    d.ctrl_percentage = d.ctrl_taxon_reads/rootReads[1][0];
     d.percentage = d.taxon_reads.map(function(x,idx){
-      if(isNaN(x/rootreads[0][idx])){
+      if(isNaN(x/rootReads[0][idx])){
         return 0;
       }else{
-        return x/rootreads[0][idx];
+        return x/rootReads[0][idx];
       }
     });
 
@@ -269,7 +272,7 @@ export class TaxonomyTreeService {
 
     if (d.children != null) {
       for (var i = 0; i < d.children.length; i++) {
-        tmp = this.filterBasedOnAnnotations(d.children[i], rootreads, key, minReads, sigLevel, minOddsRatio);
+        tmp = this.filterBasedOnAnnotations(d.children[i], key, minReads, sigLevel, minOddsRatio);
         cond.push(tmp);
         if (!tmp) {
           d.children.splice(i, 1);
@@ -324,15 +327,17 @@ export class TaxonomyTreeService {
     }
   }
 
-  filterBasedOnSearch(d: Taxon, rootreads: number[], key: string, term: string, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
+  filterBasedOnSearch(d: Taxon, key: string, term: string, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
     let cond = [], keep_node: boolean = false, tmp, _this = this;
 
-    d.ctrl_percentage = d.ctrl_taxon_reads/rootreads[1];
+    let rootReads = this.rootReads;
+
+    d.ctrl_percentage = d.ctrl_taxon_reads/rootReads[1][0];
     d.percentage = d.taxon_reads.map(function(x,idx){
-      if(isNaN(x/rootreads[0][idx])){
+      if(isNaN(x/rootReads[0][idx])){
         return 0;
       }else{
-        return x/rootreads[0][idx];
+        return x/rootReads[0][idx];
       }
     });
     // searching
@@ -372,7 +377,7 @@ export class TaxonomyTreeService {
 
     if (d.children != null) {
       for (var i = 0; i < d.children.length; i++) {
-        tmp = this.filterBasedOnSearch(d.children[i], rootreads, key, term, minReads, sigLevel, minOddsRatio);
+        tmp = this.filterBasedOnSearch(d.children[i], key, term, minReads, sigLevel, minOddsRatio);
         cond.push(tmp);
         if (!tmp) {
           d.children.splice(i, 1);
@@ -419,26 +424,26 @@ export class TaxonomyTreeService {
   //   return data;
   // }
 
-  filterPathogenic(data: Taxon, rootreads: number[], minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
-    this.filterBasedOnAnnotations(data, rootreads, "pathogenic", minReads, sigLevel, minOddsRatio);
+  filterPathogenic(data: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
+    this.filterBasedOnAnnotations(data, "pathogenic", minReads, sigLevel, minOddsRatio);
     this.compressNodesBasedOnAnnotation(data, "pathogenic");
     return data;
   }
 
-  filterSearch(data: Taxon, rootreads: number[], pathogenic: boolean, searchterm: string, minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
+  filterSearch(data: Taxon, pathogenic: boolean, searchterm: string, minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
     if (pathogenic) {
-      this.filterBasedOnAnnotations(data, rootreads, "pathogenic", minReads, sigLevel, minOddsRatio);
+      this.filterBasedOnAnnotations(data, "pathogenic", minReads, sigLevel, minOddsRatio);
     }
     if (searchterm) {
       searchterm = searchterm.toLowerCase();
-      this.filterBasedOnSearch(data, rootreads, "taxon_name", searchterm, minReads, sigLevel, minOddsRatio);
+      this.filterBasedOnSearch(data, "taxon_name", searchterm, minReads, sigLevel, minOddsRatio);
       this.compressNodesBasedOnSearch(data, "taxon_name", searchterm);
     }
     return data;
   }
 
-  setViewPort(tax_id: number = 1): Taxon[] {
-    let data: Taxon = _.cloneDeep(this.jsonData);
+  setViewPort(data:Taxon, tax_id: number = 1): Taxon[] {
+    // let data: Taxon = _.cloneDeep(this.jsonData);
     let path_to_root: Taxon[] = this.getPathToNode(data, tax_id);
     this.removeChildrenAtDepth(path_to_root[path_to_root.length - 1]);
     return path_to_root;
