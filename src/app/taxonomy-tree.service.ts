@@ -41,7 +41,7 @@ export class TaxonomyTreeService {
 
   cutScores(d: Taxon, threshold: number){
     this.scoreCut(d,threshold);
-    // this.sumTaxReads(d);
+    this.sumTaxReads(d);
     return d;
   }
 
@@ -80,19 +80,37 @@ export class TaxonomyTreeService {
   }
 
   sumTaxReads(d: Taxon){
-    var childreads = []
+    let childreads = Array(12).fill(0);
+    let child_ctrlreads = 0;
     if(d.children){
+      // childreads = childreads + d.children.forEach(this.sumTaxReads);
       for (let i = 0; i < d.children.length; i++) {
-        childreads = this.sumTaxReads(d.children[i]);
+        let tmp = this.sumTaxReads(d.children[i])
+        childreads = tmp[0].map(function(num, idx){
+          return num + childreads[idx];
+        })
+        child_ctrlreads = child_ctrlreads + tmp[1];
       }
-    }else{
-      childreads = Array(12).fill(0);
     }
+    // else{
+    //   childreads = Array(12).fill(0);
+    // }
     console.log(childreads);
+
+    // d.taxon_reads = d.reads + childreads;
     for (let j = 0; j < d.file.length; j++) {
-      d.taxon_reads[j] = d.reads[j]+childreads[j]
+      if(isNaN(d.reads[j])){
+        d.taxon_reads[j] = childreads[j]+0
+      }else{
+        d.taxon_reads[j] = d.reads[j]+childreads[j]
+      }
     }
-    return d.taxon_reads
+    if(isNaN(d.ctrl_taxon_reads)) {
+      d.ctrl_taxon_reads = 0+child_ctrlreads;
+    }else {
+      d.ctrl_taxon_reads = d.ctrl_reads+child_ctrlreads;
+    }
+    return [d.taxon_reads, d.ctrl_taxon_reads];
   }
 
   getLayout(data: Taxon, height: number, width: number, offsetX: number, offsetY: number, depth: number): HierarchyPointNode<Taxon>[] {
