@@ -113,6 +113,7 @@ export class RegressionService {
       "control": [],
       "sample": [],
       "name": [],
+      "node_pos": [],
       "pathogenic": []
     };
     this.searchTree(d);
@@ -230,16 +231,16 @@ export class RegressionService {
     return [current, this.predictedPoints, this.pointCounts];
   }
 
-  learningModel(d: Taxon, sample: string, taxon: string) {
-    document.getElementById("h1").innerHTML = "Analyzing . . .";
-    this.selectedSample = sample;
-    this.selectedTaxon = taxon;
-    let data = _.cloneDeep(this.jsonData);
-    this.sampleData = {};
-    this.findTaxons(data, this.sampleData);
-    this.arrangePoints(data, this.sampleData);
-    this.train(data, this.sampleData);
-  }
+  // learningModel(d: Taxon, sample: string, taxon: string) {
+  //   document.getElementById("h1").innerHTML = "Analyzing . . .";
+  //   this.selectedSample = sample;
+  //   this.selectedTaxon = taxon;
+  //   let data = _.cloneDeep(this.jsonData);
+  //   this.sampleData = {};
+  //   this.findTaxons(data, this.sampleData);
+  //   this.arrangePoints(data, this.sampleData);
+  //   this.train(data, this.sampleData);
+  // }
 
   prepareAnalysis(sample: string, taxon: string): [{
     "control": number,
