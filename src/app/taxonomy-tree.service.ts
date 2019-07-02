@@ -40,12 +40,13 @@ export class TaxonomyTreeService {
   }
 
   cutScores(d: Taxon, threshold: number) {
-    this.scoreCut(d, threshold);
-    // this.sumTaxReads(d);
+    this.cutScoresNode(d, threshold);
+    this.sumTaxReads(d);
     return d;
   }
 
-  scoreCut(d: Taxon, threshold: number) {
+
+  cutScoresNode(d: Taxon, threshold: number) {
     let ctrlscorearray = null;
     ctrlscorearray = d.ctrl_forward_score_distribution.split(",");
     for (let k = 0; k < 10; k++) {
@@ -74,25 +75,42 @@ export class TaxonomyTreeService {
     }
     if (d.children) {
       for (let i = 0; i < d.children.length; i++) {
-        this.scoreCut(d.children[i], threshold);
+        this.cutScoresNode(d.children[i], threshold);
       }
     }
   }
 
   sumTaxReads(d: Taxon) {
-    var childreads = []
+    let childreads = Array(12).fill(0);
+    let child_ctrlreads = 0;
     if (d.children) {
+      // childreads = childreads + d.children.forEach(this.sumTaxReads);
       for (let i = 0; i < d.children.length; i++) {
-        childreads = this.sumTaxReads(d.children[i]);
+        let tmp = this.sumTaxReads(d.children[i])
+        childreads = tmp[0].map(function(num, idx) {
+          return num + childreads[idx];
+        })
+        child_ctrlreads = child_ctrlreads + tmp[1];
       }
-    } else {
-      childreads = Array(12).fill(0);
     }
-    console.log(childreads);
+    // else{
+    //   childreads = Array(12).fill(0);
+    // }
+
+    // d.taxon_reads = d.reads + childreads;
     for (let j = 0; j < d.file.length; j++) {
-      d.taxon_reads[j] = d.reads[j] + childreads[j]
+      if (isNaN(d.reads[j])) {
+        d.taxon_reads[j] = childreads[j] + 0
+      } else {
+        d.taxon_reads[j] = d.reads[j] + childreads[j]
+      }
     }
-    return d.taxon_reads
+    if (isNaN(d.ctrl_taxon_reads)) {
+      d.ctrl_taxon_reads = 0 + child_ctrlreads;
+    } else {
+      d.ctrl_taxon_reads = d.ctrl_reads + child_ctrlreads;
+    }
+    return [d.taxon_reads, d.ctrl_taxon_reads];
   }
 
   getLayout(data: Taxon, height: number, width: number, offsetX: number, offsetY: number, depth: number): HierarchyPointNode<Taxon>[] {
@@ -205,27 +223,41 @@ export class TaxonomyTreeService {
 
   filterBasedOnAnnotations(d: Taxon, key: string, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
     let cond = [], keep_node: boolean = false, tmp, _this = this;
-    // Minimum number of reads
-    keep_node = d.taxon_reads.some(function(x) {
-      return x >= minReads;
-    });
-    cond.push(keep_node);
-    // Maximum pvalue
-    keep_node = d.pvalue.some(function(x) {
-      return x <= sigLevel;
-    });
-    cond.push(keep_node);
-    // Minimum odds ratio
-    keep_node = d.oddsratio.some(function(x) {
-      return x >= minOddsRatio;
-    });
-    cond.push(keep_node);
+
+    let thresholdarr = []
+
+    //pathogenic
     keep_node = (d[key] == 1);
     cond.push(keep_node);
+
+    // Minimum number of reads
+    let t = d.taxon_reads.map(x => x >= minReads)
+    cond.push(t.some(x => x))
+    thresholdarr[0] = t;
+    // Maximum pvalue
+    let t = d.pvalue.map(x => x <= sigLevel)
+    cond.push(t.some(x => x))
+    thresholdarr[1] = t;
+    // Minimum odds ratio
+    let t = d.oddsratio.map(x => x >= minOddsRatio)
+    cond.push(t.some(x => x))
+    thresholdarr[2] = t;
+
+    let t = []
+    for (i = 0; i < d.file.length; i++) {
+      if ([thresholdarr[0][i], thresholdarr[1][i], thresholdarr[2][i]].every(x => x)) {
+        t.push(1)
+      } else {
+        t.push(0)
+      }
+    }
+    d.over_threshold = t;
+
     keep_node = cond.every(function(x) {
       return x;
     });
     cond = [keep_node];
+
     if (d.children != null) {
       for (var i = 0; i < d.children.length; i++) {
         tmp = this.filterBasedOnAnnotations(d.children[i], key, minReads, sigLevel, minOddsRatio);
@@ -285,29 +317,42 @@ export class TaxonomyTreeService {
 
   filterBasedOnSearch(d: Taxon, key: string, term: string, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
     let cond = [], keep_node: boolean = false, tmp, _this = this;
-    // Minimum number of reads
-    keep_node = d.taxon_reads.some(function(x) {
-      return x >= minReads;
-    });
-    cond.push(keep_node);
-    // Maximum pvalue
-    keep_node = d.pvalue.some(function(x) {
-      return x <= sigLevel;
-    });
-    cond.push(keep_node);
-    // Minimum odds ratio
-    keep_node = d.oddsratio.some(function(x) {
-      return x >= minOddsRatio;
-    });
-    cond.push(keep_node);
+
+    // searching
     let termi: string[] = term.toString().split("or").map(x => x.toLowerCase().trim());
-    // If some of the terms are included. Not all terms. For "or". This condition will hcange to .every() for "and"
+    // If some of the terms are included. Not all terms. For "or". This condition will change to .every() for "and"
     keep_node = termi.some(x => d[key].toLowerCase().includes(x));
     cond.push(keep_node);
+
+    let thresholdarr = []
+    // Minimum number of reads
+    let t = d.taxon_reads.map(x => x >= minReads)
+    cond.push(t.some(x => x))
+    thresholdarr[0] = t;
+    // Maximum pvalue
+    let t = d.pvalue.map(x => x <= sigLevel)
+    cond.push(t.some(x => x))
+    thresholdarr[1] = t;
+    // Minimum odds ratio
+    let t = d.oddsratio.map(x => x >= minOddsRatio)
+    cond.push(t.some(x => x))
+    thresholdarr[2] = t;
+
+    let t = []
+    for (i = 0; i < d.file.length; i++) {
+      if ([thresholdarr[0][i], thresholdarr[1][i], thresholdarr[2][i]].every(x => x)) {
+        t.push(1)
+      } else {
+        t.push(0)
+      }
+    }
+    d.over_threshold = t;
+
     keep_node = cond.every(function(x) {
       return x;
     });
     cond = [keep_node];
+
     if (d.children != null) {
       for (var i = 0; i < d.children.length; i++) {
         tmp = this.filterBasedOnSearch(d.children[i], key, term, minReads, sigLevel, minOddsRatio);
@@ -357,24 +402,20 @@ export class TaxonomyTreeService {
   //   return data;
   // }
 
-  filterPathogenic(minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
-    let data = _.cloneDeep(this.jsonData);
+  filterPathogenic(data: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
     this.filterBasedOnAnnotations(data, "pathogenic", minReads, sigLevel, minOddsRatio);
     this.compressNodesBasedOnAnnotation(data, "pathogenic");
     return data;
   }
 
-  filterSearch(pathogenic: boolean, searchterm: string, minReads: number, sigLevel: number, minOddsRatio: number): Taxon {
-    let data = _.cloneDeep(this.jsonData);
+  filterSearch(data: Taxon, pathogenic: boolean, searchterm: string, minReads: number, sigLevel: number, minOddsRatio: number, threshold: number): Taxon {
     if (pathogenic) {
       this.filterBasedOnAnnotations(data, "pathogenic", minReads, sigLevel, minOddsRatio);
     }
     if (searchterm) {
-      if (searchterm.length > 3) {
-        searchterm = searchterm.toLowerCase();
-        this.filterBasedOnSearch(data, "taxon_name", searchterm, minReads, sigLevel, minOddsRatio);
-        this.compressNodesBasedOnSearch(data, "taxon_name", searchterm);
-      }
+      searchterm = searchterm.toLowerCase();
+      this.filterBasedOnSearch(data, "taxon_name", searchterm, minReads, sigLevel, minOddsRatio);
+      this.compressNodesBasedOnSearch(data, "taxon_name", searchterm);
     }
     return data;
   }
@@ -384,6 +425,11 @@ export class TaxonomyTreeService {
     let path_to_root: Taxon[] = this.getPathToNode(data, tax_id);
     this.removeChildrenAtDepth(path_to_root[path_to_root.length - 1]);
     return path_to_root;
+  }
+
+  setBiggerPort(): Taxon[] {
+    let data: Taxon = _.cloneDeep(this.jsonData);
+    return data
   }
 
   getRangeOfKeyAtDepth(_data: Taxon, key: string, depth: number, min?: number[], max?: number[]): [number[], number[]] {

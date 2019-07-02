@@ -26,6 +26,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   private minReads: number = 10;
   private sigLevel: number = 0.05;
   private minOddsRatio: number = 1;
+  private scoreThreshold: number;
 
   private searchterm: string;
   private pathogenic: boolean = false;
@@ -73,6 +74,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   ) { }
 
   ngOnInit() {
+    this.scoreThreshold = 0.1;
     this.getScreenSize(); // On init since value passed to node-bar-chart component
   }
 
@@ -92,7 +94,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     let t: Taxon[] = this.taxonomyTreeService.setViewPort(tax_id);
     this.pathToRoot = t;
     this.taxonomyTree = t[t.length - 1];
-    this.taxonomyTree = this.taxonomyTreeService.cutScores(this.taxonomyTree, 1);
+    this.taxonomyTree = this.taxonomyTreeService.cutScores(this.taxonomyTree, this.scoreThreshold);
     this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
     this.currentNode = this.taxonomyTree;
     this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth * (2 / 3), this.canvasOffset.x, this.canvasOffset.y, this.screenWidth * (1 / 6));
@@ -100,8 +102,9 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   }
 
   showSearch(): void {
-    this.taxonomyTree = this.taxonomyTreeService.filterSearch(this.pathogenic, this.searchterm, this.minReads, this.sigLevel, this.minOddsRatio);
-    // this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
+    this.taxonomyTree = this.taxonomyTreeService.setBiggerPort();
+    this.taxonomyTree = this.taxonomyTreeService.cutScores(this.taxonomyTree, this.scoreThreshold);
+    this.taxonomyTree = this.taxonomyTreeService.filterSearch(this.taxonomyTree, this.pathogenic, this.searchterm, this.minReads, this.sigLevel, this.minOddsRatio);
     this.pathToRoot = [this.taxonomyTree];
     this.currentNode = this.taxonomyTree;
     this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth * (2 / 3), this.canvasOffset.x, this.canvasOffset.y, this.screenWidth * (1 / 12));
@@ -109,7 +112,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   }
 
   showPathogenic(tax_id: number): void {
-    this.taxonomyTree = this.taxonomyTreeService.filterPathogenic(this.minReads, this.sigLevel, this.minOddsRatio);
+    this.taxonomyTree = this.taxonomyTreeService.filterPathogenic(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
     this.taxonomyTreeService.filterTaxonomyTree(this.taxonomyTree, this.minReads, this.sigLevel, this.minOddsRatio);
     this.pathToRoot = [this.taxonomyTree];
     this.currentNode = this.taxonomyTree;

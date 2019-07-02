@@ -23,7 +23,17 @@
 	  <label for="sigLevel">Significance Level</label>
 	  <input type="text" class="form-control" id="sigLevel" placeholder="Significance Level" [(ngModel)]="sigLevel" name="sigLevel">
 	</div>
+
+  <!-- <div class="form-group col-md-4">
+    <label for="minReads">Minimum Kmer Score</label>
+    <select [(ngModel)]="kmerThreshold" (ngModelChange)="drawCanvas(taxonomyTree.tax_id)">
+      <option *ngFor="let c of [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]" [ngValue]="c">{{c}}</option>
+    </select>
+  </div> -->
       </div>
+      <select [(ngModel)]="scoreThreshold" name= "scoreselect" (ngModelChange)="drawCanvas(taxonomyTree.tax_id)">
+        <option *ngFor="let c of [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]" [ngValue]="c">{{c}}</option>
+      </select>
       <div class="form-row">
 	<div class="col-md-6">
 	  <button class="btn btn-primary mb-2" (click)="drawCanvas(taxonomyTree.tax_id)">Filter</button>
