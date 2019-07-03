@@ -52,7 +52,7 @@ export class RegressionComponent implements AfterViewInit, OnInit {
     this.jsonData = this.regressionService.cutScores(this.jsonData, this.scoreThreshold, this.selectedSample);
     this.regressionService.prepareAnalysis(this.selectedSample, this.selectedTaxon); // Sets current points in service
     this.updateplot();
-    this.regressionService.trainAndPredict(this.jsonData).then(
+    this.regressionService.trainAndPredict().then(
       pred => {
         this.updateplot();
         this.updateline(pred);
@@ -65,19 +65,9 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .attr("width", this.canvas_width)
       .attr("height", this.canvas_height);
 
-    let xScale = d3.scaleLinear()
-      .domain([0, this.init_reads])
-      .range([this.padding, this.canvas_width - this.padding * 2])
-      .nice();
-
     let xLScale = d3.scaleLog()
       .domain([1, this.init_reads])
       .range([this.padding, this.canvas_width - this.padding * 2])
-      .nice();
-
-    let yScale = d3.scaleLinear()
-      .domain([0, this.init_reads])
-      .range([this.canvas_height - this.padding, this.padding])
       .nice();
 
     let yLScale = d3.scaleLog()
@@ -185,14 +175,12 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
 
-    var circle = svg.selectAll("circle")
+    var circle = svg.selectAll(".taxon")
       .data(current);
 
-    circle.attr("class", "update");
-
-    circle.enter()
+    let circleEnter = circle.enter()
       .append("circle")
-      .attr("class", "enter")
+      .attr("class", "taxon")
       .attr("x", function(d) {
         return xScale(d.control);
       })
@@ -229,9 +217,9 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .on("mouseover", function(d) {
         d3.select(this).style("cursor", "pointer");
         if (d.pathogenic) {
-          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control)-1) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample)-1) + "<br/>" + "known pathogen");
+          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control) - 1) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample) - 1) + "<br/>" + "known pathogen");
         } else {
-          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control)-1) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample)-1));
+          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control) - 1) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample) - 1));
         }
       })
       .on("mousemove", function() { return tooltip.style("top", (d3.event.pageY - 10) + "px").style("left", (d3.event.pageX + 10) + "px"); })
@@ -247,9 +235,10 @@ export class RegressionComponent implements AfterViewInit, OnInit {
           }
         });
 
-    circle.attr("x", function(d) {
-      return xScale(d.control);
-    })
+    circleEnter.merge(circle)
+      .attr("x", function(d) {
+        return xScale(d.control);
+      })
       .attr("y", function(d) {
         return yScale(d.sample);
       })
@@ -280,19 +269,17 @@ export class RegressionComponent implements AfterViewInit, OnInit {
           return '#000000';
         }
       })
-      .style("fill",
-        function(d) {
-          if (d.node_pos == 2) {
-            return "#5ac1e0";
-          } else if (d.node_pos == 1) {
-            return "#adadad";
-          } else {
-            return "#f4aa4e";
-          }
-        });
+      .style("fill", function(d) {
+        if (d.node_pos == 2) {
+          return "#5ac1e0";
+        } else if (d.node_pos == 1) {
+          return "#adadad";
+        } else {
+          return "#f4aa4e";
+        }
+      });
 
     circle.exit()
-      .attr("class", "exit")
       .remove();
 
     var xAxis = d3.axisBottom(xLScale)
@@ -330,9 +317,6 @@ export class RegressionComponent implements AfterViewInit, OnInit {
   updateline(pred: number[][]) {
     console.log(pred);
     let current = this.regressionService.getCurrentPoints();
-    let padding = 50;
-    let canvas_width = 800;
-    let canvas_height = 500;
     var svg = d3.select("svg");
 
     var xScale = d3.scaleLinear()
@@ -342,23 +326,9 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    var xLScale = d3.scaleLog()
-      .domain([1, d3.max(current, function(d) {
-        return Math.pow(10, d.control);
-      })])
-      .range([this.padding, this.canvas_width - this.padding * 2])
-      .nice();
-
     var yScale = d3.scaleLinear()
       .domain([0, d3.max(current, function(d) {
         return d.sample;
-      })])
-      .range([this.canvas_height - this.padding, this.padding])
-      .nice();
-
-    var yLScale = d3.scaleLog()
-      .domain([1, d3.max(current, function(d) {
-        return Math.pow(10, d.sample);
       })])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
