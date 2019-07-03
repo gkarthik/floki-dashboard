@@ -4,7 +4,6 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import * as _ from "lodash";
-import * as d3 from 'd3';
 
 import * as tf from '@tensorflow/tfjs';
 
@@ -18,14 +17,13 @@ export class RegressionService {
   private jsonData: Taxon = new Taxon();
   private selectedSample: string;
   private selectedTaxon: string;
-  private currentPoints: [{
+  private currentPoints: [{	// List of dict for d3 data()
     "control": number,
     "sample": number,
     "name": string,
     "node_pos": number,
     "pathogenic": number
   }];
-  private pointCounts: number[];
   // Sample data elements
   // 0 - control reads
   // 1 - sample reads
@@ -39,8 +37,10 @@ export class RegressionService {
     "node_pos": number[],
     "pathogenic": number[]
   };
-  private logcontrolreads = null;
-  private logtaxonreads = null;
+  private train: {
+    "ctrl_reads_log": number[],
+    "taxa_reads_log": number[]
+  }
 
   constructor(
     private http: HttpClient
@@ -125,8 +125,9 @@ export class RegressionService {
     let index = d.file.indexOf(this.selectedSample);
     if (d.rank == this.selectedTaxon) {
       if (d.reads[index] > 0 && d.taxon_name != "Homo sapiens") {
-        this.sampleData["control"].push(Math.log10(1+d.ctrl_reads + Math.random() * 0.15));
-        this.sampleData["sample"].push(Math.log10(1+d.reads[index] + Math.random() * 0.15));
+
+        this.sampleData["control"].push(d.ctrl_reads);
+        this.sampleData["sample"].push(d.reads[index]);
         // if (d.ctrl_reads == 0) {
         //   this.sampleData["control"].push(0.1);
         // } else {
@@ -154,14 +155,14 @@ export class RegressionService {
       "node_pos": number,
       "pathogenic": number
     }];
-    this.logcontrolreads = [];
-    this.logtaxonreads = [];
+    this.train = {
+      "ctrl_reads_log": _.cloneDeep(this.sampleData.control).map((x) => Math.log10(x + 1)),
+      "taxa_reads_log": _.cloneDeep(this.sampleData.sample).map((x) => Math.log10(x + 1))
+    }
     for (let j = 0; j < this.sampleData.control.length; j++) {
-      this.logcontrolreads.push(this.sampleData.control[j]);
-      this.logtaxonreads.push(this.sampleData.sample[j]);
       this.currentPoints.push({
-        "control": this.sampleData.control[j],
-        "sample": this.sampleData.sample[j],
+        "control": Math.log10(this.sampleData.control[j] + 1 + 0.15 * Math.random()),
+        "sample": Math.log10(this.sampleData.sample[j] + 1 + 0.15 * Math.random()),
         "node_pos": 0,
         "name": this.sampleData.name[j],
         "pathogenic": this.sampleData.pathogenic[j]
@@ -169,15 +170,15 @@ export class RegressionService {
     };
   }
 
-  async trainAndPredict(d: Taxon) {
+  async trainAndPredict() {
 
     // this.linearModel = tf.sequential();
     // this.linearModel.add(tf.layers.dense({ units: 1, inputShape: [1] }));
     // this.linearModel.add(tf.layers.dense({ units: 1 }));
     // this.linearModel.compile({ loss: 'meanSquaredError', optimizer: 'adam' });
 
-    const xs = tf.data.array(this.logcontrolreads);
-    const ys = tf.data.array(this.logtaxonreads);
+    const xs = tf.data.array(this.train.ctrl_reads_log);
+    const ys = tf.data.array(this.train.taxa_reads_log);
     const ds = tf.data.zip({ x: xs, y: ys }).shuffle(100).batch(32);
     const learningRate = 0.01;
     const optimizer = tf.train.sgd(learningRate);
@@ -200,7 +201,7 @@ export class RegressionService {
     }
 
     let test_x: number[] = [];
-    let diff =  Math.max.apply(null, this.logcontrolreads) -  Math.min.apply(null, this.logcontrolreads);
+    let diff = Math.max.apply(null, this.train.ctrl_reads_log) - Math.min.apply(null, this.train.ctrl_reads_log);
     diff /= 10;
     for (let i = 0; i <= 10; i++) {
       test_x.push(i * diff + Math.min.apply(null, this.logcontrolreads));
