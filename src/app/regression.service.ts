@@ -64,6 +64,10 @@ export class RegressionService {
     return this.currentPoints;
   }
 
+  getPointCounts(): number[] {
+    return this.pointCounts;
+  }
+
   getTree(): Observable<any> {
     return this.http.get<any>(this.reportUrl)
       .pipe(
@@ -194,10 +198,11 @@ export class RegressionService {
         });
       });
     }
+
     let test_x: number[] = [];
     let diff =  Math.max.apply(null, this.logcontrolreads) -  Math.min.apply(null, this.logcontrolreads);
     diff /= 10;
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i <= 10; i++) {
       test_x.push(i * diff + Math.min.apply(null, this.logcontrolreads));
     }
     let pred_y = model(tf.tensor(test_x)).dataSync();
@@ -205,6 +210,28 @@ export class RegressionService {
     await pred_y.forEach((pred, i) => {
       predictions.push([test_x[i], pred]);
     });
+
+    test_x = this.logcontrolreads;
+    let pred_y = model(tf.tensor(test_x)).dataSync();
+    let comparingPoints = [];
+    await pred_y.forEach((pred, i) => {
+      comparingPoints.push(pred);
+    });
+
+    this.pointCounts = Array(3).fill(0);
+
+    for(let j = 0; j < this.currentPoints.length; j++){
+      if(Math.round(Math.pow(10,this.currentPoints[j].sample)) > Math.round(Math.pow(10,comparingPoints[j]))){
+        this.currentPoints[j].node_pos=2;
+        this.pointCounts[2]+=1
+      }else if (Math.round(Math.pow(10,this.currentPoints[j].sample)) == Math.round(Math.pow(10,comparingPoints[j]))){
+        this.currentPoints[j].node_pos=1;
+        this.pointCounts[1]+=1
+      }else{
+        this.pointCounts[0]+=1
+      }
+    }
+
     return predictions;
   }
 

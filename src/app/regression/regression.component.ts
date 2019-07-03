@@ -330,6 +330,7 @@ export class RegressionComponent implements AfterViewInit, OnInit {
   updateline(pred: number[][]) {
     console.log(pred);
     let current = this.regressionService.getCurrentPoints();
+    let pointCounts = this.regressionService.getPointCounts();
     let padding = 50;
     let canvas_width = 800;
     let canvas_height = 500;
@@ -383,20 +384,20 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .style('fill', 'none')
       .style('stroke', "#FF4533");
 
-    // svg.select("#aboveline")
-    //   .attr("text-anchor", "end")
-    //   .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 50 + ")")
-    //   .style("font-size", "15px")
-    //   .text("In sample: " + predicted[2]);
-    // svg.select("#online")
-    //   .attr("text-anchor", "end")
-    //   .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 70 + ")")
-    //   .style("font-size", "15px")
-    //   .text("Contaminants: " + predicted[1]);
-    // svg.select("#belowline")
-    //   .attr("text-anchor", "end")
-    //   .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 90 + ")")
-    //   .style("font-size", "15px")
-    //   .text("Background: " + predicted[0]);
+    svg.select("#aboveline")
+      .attr("text-anchor", "end")
+      .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 50 + ")")
+      .style("font-size", "15px")
+      .text("In sample: " + pointCounts[2]);
+    svg.select("#online")
+      .attr("text-anchor", "end")
+      .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 70 + ")")
+      .style("font-size", "15px")
+      .text("Contaminants: " + pointCounts[1]);
+    svg.select("#belowline")
+      .attr("text-anchor", "end")
+      .attr("transform", "translate(" + (canvas_width * 0.88) + "," + 90 + ")")
+      .style("font-size", "15px")
+      .text("Background: " + pointCounts[0]);
   }
 }
