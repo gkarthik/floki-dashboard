@@ -121,16 +121,18 @@ export class RegressionService {
     let index = d.file.indexOf(this.selectedSample);
     if (d.rank == this.selectedTaxon) {
       if (d.reads[index] > 0 && d.taxon_name != "Homo sapiens") {
-        if (d.ctrl_reads <= 0) {
-          this.sampleData["control"].push(0.1);
-        } else {
-          this.sampleData["control"].push(d.ctrl_reads + Math.random() * 0.15);
-        }
-        if (d.reads[index] <= 0) {
-          this.sampleData["sample"].push(0.1);
-        } else {
-          this.sampleData["sample"].push(d.reads[index] + Math.random() * 0.15);
-        }
+        this.sampleData["control"].push(Math.log10(1+d.ctrl_reads + Math.random() * 0.15));
+        this.sampleData["sample"].push(Math.log10(1+d.reads[index] + Math.random() * 0.15));
+        // if (d.ctrl_reads == 0) {
+        //   this.sampleData["control"].push(0.1);
+        // } else {
+        //   this.sampleData["control"].push(d.ctrl_reads + Math.random() * 0.15);
+        // }
+        // if (d.reads[index] == 0) {
+        //   this.sampleData["sample"].push(0.1);
+        // } else {
+        //   this.sampleData["sample"].push(d.reads[index] + Math.random() * 0.15);
+        // }
         this.sampleData["name"].push(d.taxon_name);
         this.sampleData["pathogenic"].push(d.pathogenic);
       }
@@ -151,11 +153,11 @@ export class RegressionService {
     this.logcontrolreads = [];
     this.logtaxonreads = [];
     for (let j = 0; j < this.sampleData.control.length; j++) {
-      this.logcontrolreads.push(Math.log10(this.sampleData.sample[j]));
-      this.logtaxonreads.push(Math.log10(this.sampleData.control[j]));
+      this.logcontrolreads.push(this.sampleData.control[j]);
+      this.logtaxonreads.push(this.sampleData.sample[j]);
       this.currentPoints.push({
-        "control": Math.log10(this.sampleData.control[j]),
-        "sample": Math.log10(this.sampleData.sample[j]),
+        "control": this.sampleData.control[j],
+        "sample": this.sampleData.sample[j],
         "node_pos": 0,
         "name": this.sampleData.name[j],
         "pathogenic": this.sampleData.pathogenic[j]
@@ -193,8 +195,10 @@ export class RegressionService {
       });
     }
     let test_x: number[] = [];
-    for (let i = Math.min.apply(null, this.logcontrolreads); i < Math.max.apply(null, this.logcontrolreads); i++) {
-      test_x.push(0.5 * i);
+    let diff =  Math.max.apply(null, this.logcontrolreads) -  Math.min.apply(null, this.logcontrolreads);
+    diff /= 10;
+    for (let i = 0; i < 10; i++) {
+      test_x.push(i * diff + Math.min.apply(null, this.logcontrolreads));
     }
     let pred_y = model(tf.tensor(test_x)).dataSync();
     let predictions: number[][] = [];

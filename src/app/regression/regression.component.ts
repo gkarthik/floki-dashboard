@@ -66,7 +66,7 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .attr("height", this.canvas_height);
 
     let xScale = d3.scaleLinear()
-      .domain([1, this.init_reads])
+      .domain([0, this.init_reads])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
@@ -76,7 +76,7 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .nice();
 
     let yScale = d3.scaleLinear()
-      .domain([1, this.init_reads])
+      .domain([0, this.init_reads])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
 
@@ -166,7 +166,7 @@ export class RegressionComponent implements AfterViewInit, OnInit {
 
     var xLScale = d3.scaleLog()
       .domain([1, d3.max(current, function(d) {
-        return Math.pow(10, d.control) - 1;
+        return Math.pow(10, d.control);
       })])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
@@ -180,7 +180,7 @@ export class RegressionComponent implements AfterViewInit, OnInit {
 
     var yLScale = d3.scaleLog()
       .domain([1, d3.max(current, function(d) {
-        return Math.pow(10, d.sample) - 1;
+        return Math.pow(10, d.sample);
       })])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
@@ -229,9 +229,9 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .on("mouseover", function(d) {
         d3.select(this).style("cursor", "pointer");
         if (d.pathogenic) {
-          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control)) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample)) + "<br/>" + "known pathogen");
+          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control)-1) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample)-1) + "<br/>" + "known pathogen");
         } else {
-          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control)) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample)));
+          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control)-1) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample)-1));
         }
       })
       .on("mousemove", function() { return tooltip.style("top", (d3.event.pageY - 10) + "px").style("left", (d3.event.pageX + 10) + "px"); })
@@ -266,6 +266,20 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .attr("cy", function(d) {
         return yScale(d.sample);
       })
+      .attr("stroke-width", function(d) {
+        if (d.pathogenic) {
+          return 2;
+        } else {
+          return 0.6;
+        }
+      })
+      .style("stroke", function(d) {
+        if (d.pathogenic) {
+          return '#E04836';
+        } else {
+          return '#000000';
+        }
+      })
       .style("fill",
         function(d) {
           if (d.node_pos == 2) {
@@ -275,7 +289,7 @@ export class RegressionComponent implements AfterViewInit, OnInit {
           } else {
             return "#f4aa4e";
           }
-        })
+        });
 
     circle.exit()
       .attr("class", "exit")
@@ -325,19 +339,40 @@ export class RegressionComponent implements AfterViewInit, OnInit {
       .domain([0, d3.max(current, function(d) {
         return d.control;
       })])
-      .range([padding, canvas_width - padding * 2])
+      .range([this.padding, this.canvas_width - this.padding * 2])
+      .nice();
+
+    var xLScale = d3.scaleLog()
+      .domain([1, d3.max(current, function(d) {
+        return Math.pow(10, d.control);
+      })])
+      .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
     var yScale = d3.scaleLinear()
       .domain([0, d3.max(current, function(d) {
         return d.sample;
       })])
-      .range([canvas_height - padding, padding])
+      .range([this.canvas_height - this.padding, this.padding])
       .nice();
 
+    var yLScale = d3.scaleLog()
+      .domain([1, d3.max(current, function(d) {
+        return Math.pow(10, d.sample);
+      })])
+      .range([this.canvas_height - this.padding, this.padding])
+      .nice();
+
+    // var yScale = d3.scaleLinear()
+    //   .domain([0, d3.max(current, function(d) {
+    //     return d.sample;
+    //   })])
+    //   .range([canvas_height - padding, padding])
+    //   .nice();
+
     var line = d3.line()
-      .x(function(d) { return xScale(Math.pow(10, d[0]) - 1); })
-      .y(function(d) { return yScale(Math.pow(10, d[1]) - 1); })
+      .x(function(d) { return xScale(d[0]); })
+      .y(function(d) { return yScale(d[1]); })
       .curve(d3.curveMonotoneX);
 
     svg.select("#regression_line")

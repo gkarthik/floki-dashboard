@@ -26,7 +26,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   private minReads: number = 10;
   private sigLevel: number = 0.05;
   private minOddsRatio: number = 1;
-  private scoreThreshold: number;
+  private scoreThreshold: number = 0.1;
 
   private searchterm: string;
   private pathogenic: boolean = false;
@@ -74,7 +74,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   ) { }
 
   ngOnInit() {
-    this.scoreThreshold = 0;
+    // this.scoreThreshold = 0.1;
     this.getScreenSize(); // On init since value passed to node-bar-chart component
   }
 
