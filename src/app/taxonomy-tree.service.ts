@@ -91,7 +91,7 @@ export class TaxonomyTreeService {
         childreads = tmp[0].map(function(num, idx) {
           return num + childreads[idx];
         })
-        child_ctrlreads = child_ctrlreads + tmp[1][0];
+        child_ctrlreads = child_ctrlreads + tmp[1];
       }
     }
     for (let j = 0; j < d.file.length; j++) {
