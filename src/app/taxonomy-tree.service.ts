@@ -82,7 +82,7 @@ export class TaxonomyTreeService {
   }
 
   sumTaxReads(d: Taxon): number[][] {
-    let childreads: number[] = Array(12).fill(0);
+    let childreads: number[] = Array(d.file.length).fill(0);
     let child_ctrlreads: number = 0;
     if (d.children) {
       // childreads = childreads + d.children.forEach(this.sumTaxReads);
@@ -91,7 +91,7 @@ export class TaxonomyTreeService {
         childreads = tmp[0].map(function(num, idx) {
           return num + childreads[idx];
         })
-        child_ctrlreads = child_ctrlreads + tmp[1];
+        child_ctrlreads = child_ctrlreads + tmp[1][0];
       }
     }
     for (let j = 0; j < d.file.length; j++) {
@@ -165,6 +165,11 @@ export class TaxonomyTreeService {
   //   });
   //   return keep_node;
   // }
+
+  getRootReads(): number[][] {
+    return this.rootReads;
+  }
+
 
   filterTaxonomyTree(d: Taxon, minReads: number, sigLevel: number, minOddsRatio: number): boolean {
     let cond = [], keep_node: boolean = false, tmp, _this = this;

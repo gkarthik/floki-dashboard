@@ -89,7 +89,7 @@ export class ScoreDistributionChartComponent implements OnChanges, AfterViewInit
     let y_domain_elmns = _.cloneDeep(this.distribution[file_indice]);
     y_domain_elmns.push.apply(y_domain_elmns, this.ctrl_distribution); // Get ctrl value as well
     y_domain_elmns.push(0); // Add zero
-    let y_domain = [Math.min.apply(Math, y_domain_elmns), Math.max.apply(Math, y_domain_elmns)];
+    let y_domain = [Math.min.apply(Math, y_domain_elmns), Math.max.apply(Math, y_domain_elmns)+10];
     if (y_domain[0] == y_domain[1]) {
       y_domain[0] = y_domain[1] - 0.5; // If value 0 show zero.
     }
