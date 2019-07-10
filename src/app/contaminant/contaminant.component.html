@@ -1,0 +1,55 @@
+<body>
+  <table>
+    <tr>
+      <th>Sample selection:  </th>
+      <th>&nbsp;</th>
+      <th>Taxon:</th>
+      <th>&nbsp;</th>
+      <th>Reads Score:</th>
+      <!-- <th>Taxon selection:</th> -->
+    </tr>
+    <tr>
+      <td>
+        <select [(ngModel)]="selectedSample" (ngModelChange)="realize()">
+          <option *ngFor="let c of jsonData.file" [ngValue]="c">{{c}}</option>
+        </select>
+      </td>
+      <td>&nbsp;</td>
+      <td>
+        <select [(ngModel)]="selectedTaxon" (ngModelChange)="realize()">
+          <option value = "species">species</option>
+          <option value = "genus">genus</option>
+        </select>
+      </td>
+      <td>&nbsp;</td>
+      <td>
+      <select [(ngModel)]="scoreThreshold" (ngModelChange)="realize()">
+        <option *ngFor="let c of [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]" [ngValue]="c">{{c}}</option>
+      </select>
+      </td>
+    </tr>
+  </table>
+  <p id="h1">Select a sample from the dropdown</p>
+  <svg #chartWrapper id="chart-wrapper"></svg>
+  <div #tooltip id="tooltip"></div>
+  <svg #tsneWrapper id="tsne-wrapper"></svg>
+
+
+  <!-- <svg id = "analysis_chart"> -->
+  <!--   <\!-- <filter id="sofGlow" height="300%" width="300%" x="-75%" y="-75%"> -\-> -->
+  <!--   <\!--   <\\!-- Thicken out the original shape -\\-> -\-> -->
+  <!--   <\!--   <feMorphology operator="dilate" radius="4" in="SourceAlpha" result="thicken" /> -\-> -->
+  <!--   <\!--   <\\!-- Use a gaussian blur to create the soft blurriness of the glow -\\-> -\-> -->
+  <!--   <\!--   <feGaussianBlur in="thicken" stdDeviation="10" result="blurred" /> -\-> -->
+  <!--   <\!--   <\\!-- Change the colour -\\-> -\-> -->
+  <!--   <\!--   <feFlood flood-color="rgb(0,186,255)" result="glowColor" /> -\-> -->
+  <!--   <\!--   <\\!-- Color in the glows -\\-> -\-> -->
+  <!--   <\!--   <feComposite in="glowColor" in2="blurred" operator="in" result="softGlow_colored" /> -\-> -->
+  <!--   <\!--   <\\!--	Layer the effects together -\\-> -\-> -->
+  <!--   <\!--   <feMerge> -\-> -->
+  <!--   <\!--     <feMergeNode in="softGlow_colored"/> -\-> -->
+  <!--   <\!--     <feMergeNode in="SourceGraphic"/> -\-> -->
+  <!--   <\!--   </feMerge> -\-> -->
+  <!--   <\!-- </filter> -\-> -->
+  <!-- </svg> -->
+</body>
