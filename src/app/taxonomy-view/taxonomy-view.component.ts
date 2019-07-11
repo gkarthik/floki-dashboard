@@ -1,5 +1,6 @@
 import { Component, OnInit, AfterViewInit, HostListener, ViewChild, ElementRef, Input } from '@angular/core';
 import { NodeBarChartComponent } from '../node-bar-chart/node-bar-chart.component';
+import { NodePathogenicTableComponent } from '../node-pathogenic-table/node-pathogenic-table.component';
 
 import { TaxonomyTreeService } from '../taxonomy-tree.service';
 
@@ -66,8 +67,6 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   private treeDescendants: HierarchyPointNode<Taxon>[];
   private pathToRoot: Taxon[] = [];
   private canvasWrapper;
-
-  private scoreThreshold: number;
 
   constructor(
     private taxonomyTreeService: TaxonomyTreeService
@@ -150,6 +149,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
           d3.select(this).attr("fill", _this.colorScheme["hover_fill"]);
           if (d.data.tax_id != -1) // Avoid hover oncompressed nodes
             _this.currentNode = d.data;
+            // console.log(d.data);
           _this.canvasEl.style.cursor = "pointer";
           hoverEvent = true;
         } else if (d3.select(this).attr("_fill") != null) {
