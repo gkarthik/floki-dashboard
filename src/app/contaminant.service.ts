@@ -8,7 +8,6 @@ import * as _ from "lodash";
 import * as tf from '@tensorflow/tfjs';
 import TSNE from 'tsne-js';
 
-
 import { Taxon } from './taxon';
 
 @Injectable({
@@ -40,7 +39,8 @@ export class ContaminantService {
     "name": string,
     "pathogenic": number,
     "tsneX":number,
-    "tsneY":number
+    "tsneY":number,
+    "node_pos":number
   }];
   // Sample data elements
   // 0 - control reads
@@ -167,7 +167,7 @@ export class ContaminantService {
     } else {
       d.ctrl_taxon_reads = d.ctrl_reads + child_ctrlreads;
     }
-    return [d.taxon_reads, d.ctrl_taxon_reads];
+    return [d.taxon_reads, [d.ctrl_taxon_reads]];
   }
 
   findTaxons(d: Taxon) {
@@ -217,6 +217,14 @@ export class ContaminantService {
         "pathogenic": this.sampleData.pathogenic[j]
       });
     };
+    for (let j = 0; j < this.plotTotalPoints.length; j++) {
+      this.plotTotalPoints[j].node_pos=3;
+      for (let k = 0; k < this.currentPoints.length; k++) {
+        if(this.currentPoints[k].name == this.plotTotalPoints[j].name) {
+          this.plotTotalPoints[j].node_pos = 0;
+        }
+      }
+    }
   }
 
   async trainAndPredict() {
@@ -235,7 +243,7 @@ export class ContaminantService {
 
     for(let epoch = 0; epoch<100;epoch++){
       await new Promise(resolve=> setTimeout(resolve, 1));
-      await ds.forEachAsync(({ x, y }) => {
+      await ds.forEachAsync(({x,y}) => {
         optimizer.minimize(() => {
           const predYs = model(x);
           const l = loss(y, predYs);
@@ -278,6 +286,11 @@ export class ContaminantService {
       }else{
         this.pointCounts[0]+=1
       }
+      for(let k = 0; k < this.plotTotalPoints.length; k++){
+        if(this.currentPoints[j].name==this.plotTotalPoints[k].name){
+          this.plotTotalPoints[k].node_pos=this.currentPoints[j].node_pos;
+        }
+      }
     }
 
     return predictions;
@@ -300,12 +313,17 @@ export class ContaminantService {
 
   findTotals(d: Taxon, rootReads: number[][]) {
     this.totalPoints = {
-      "control": [],
-      "percentage": [],
-      "sample": [],
-      "name": [],
-      "pathogenic": []
-    };
+      "control":[],
+      "sample":[],
+      "percentage":[],
+      "name":[],
+      "pathogenic":[]
+    }
+    // this.totalPoints["control"]=[];
+    // this.totalPoints["sample"]=[];
+    // this.totalPoints["percentage"]=[];
+    // this.totalPoints["name"]=[];
+    // this.totalPoints["pathogenic"]=[];
     this.plotTotalPoints = Array() as [{
       "control": number,
       "sample": number[],
@@ -313,7 +331,8 @@ export class ContaminantService {
       "name": string,
       "pathogenic": number,
       "tsneX": number,
-      "tsneY": number
+      "tsneY": number,
+      "node_pos":number
     }];
     this.countTotals(d, rootReads);
   }
@@ -362,7 +381,8 @@ export class ContaminantService {
         "name": this.totalPoints['name'][i],
         "pathogenic": this.totalPoints['pathogenic'][i],
         "tsneX": output[i][0],
-        "tsneY": output[i][1]
+        "tsneY": output[i][1],
+        "node_pos": 3
       });
     }
     console.log(this.plotTotalPoints);

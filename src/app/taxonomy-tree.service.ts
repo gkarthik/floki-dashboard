@@ -91,7 +91,7 @@ export class TaxonomyTreeService {
         childreads = tmp[0].map(function(num, idx) {
           return num + childreads[idx];
         })
-        child_ctrlreads = child_ctrlreads + tmp[1];
+        child_ctrlreads = child_ctrlreads + tmp[1][0];
       }
     }
     for (let j = 0; j < d.file.length; j++) {
@@ -106,7 +106,7 @@ export class TaxonomyTreeService {
     } else {
       d.ctrl_taxon_reads = d.ctrl_reads + child_ctrlreads;
     }
-    return [d.taxon_reads, d.ctrl_taxon_reads];
+    return [d.taxon_reads, [d.ctrl_taxon_reads]];
   }
 
   getLayout(data: Taxon, height: number, width: number, offsetX: number, offsetY: number, depth: number): HierarchyPointNode<Taxon>[] {

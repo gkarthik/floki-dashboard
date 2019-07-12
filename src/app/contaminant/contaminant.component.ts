@@ -42,22 +42,24 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     this.scoreThreshold = 1;
     this.selectedTaxon = "species";
     this.jsonData = _;
+    this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
     this.initializePlot();
-    // this.tsnePlot();
+    this.tsneModel();
   }
 
   ngAfterViewInit() {
-
   }
 
-  async realize() {
+  realize() {
     this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
     this.jsonData = this.contaminantService.cutScores(this.jsonData, this.scoreThreshold, this.selectedSample);
     this.contaminantService.prepareAnalysis(this.selectedSample, this.selectedTaxon); // Sets current points in service
     this.updateplot()
+    this.tsnePlot();
     this.contaminantService.trainAndPredict().then(
       pred => {
         this.updateplot(),
+        this.tsnePlot(),
         this.updateline(pred)
       });
   }
@@ -380,13 +382,15 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .text("Background: " + pointCounts[0]);
   }
 
-  tsnePlot(){
+  tsneModel(){
     let reducedTree = this.taxonomyTreeService.cutScores(this.jsonData, 0.7);
     let rootReads = this.taxonomyTreeService.getRootReads();
     this.contaminantService.findTotals(reducedTree, rootReads);
     this.contaminantService.tsneModel();
+    this.tsnePlot();
+  }
+  tsnePlot(){
     let plotpoints = this.contaminantService.getPlotTotalPoints();
-
     let svg = d3.select(this.svg2.nativeElement)
       .attr("width", this.canvas_width)
       .attr("height", this.canvas_height);
@@ -413,7 +417,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
     var logScale = d3.scaleLog().domain([0.0000001, 5])
 
-    var colorScale = d3.scaleSequential((d)=>d3.interpolateRdYlBu(logScale(d)));
+    // var colorScale = d3.scaleSequential((d)=>d3.interpolateRdYlBu(logScale(d)));
 
     var circle = svg.selectAll(".taxon")
       .data(plotpoints);
@@ -451,9 +455,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .on("mousemove", function() { return tooltip.style("top", (d3.event.pageY - 10) + "px").style("left", (d3.event.pageX + 10) + "px"); })
       .on("mouseout", function() { d3.select(this).style("cursor", "default"); return tooltip.style("visibility", "hidden"); })
       .attr("stroke-width", function(d) {
-        if(d.name == 'Escherichia coli'){
-          return 5;
-        }else
         if (d.pathogenic) {
           return 2;
         } else {
@@ -467,10 +468,17 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
           return '#000000';
         // }
       })
-      .style("fill", function(d){
-        return colorScale(d3.sum(d.percentage));
-      });
-
+      .style("fill", function(d) {
+          if (d['node_pos'] == 3) {
+            return "#d3d3d3";
+          } else if (d['node_pos'] == 2) {
+            return "#5ac1e0";
+          } else if (d['node_pos'] == 1) {
+            return "#adadad";
+          } else {
+            return "#f4aa4e";
+          }
+        });
     circleEnter.merge(circle)
       .attr("x", function(d) {
         return xScale(d.tsneX);
@@ -492,9 +500,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         return yScale(d.tsneY);
       })
       .attr("stroke-width", function(d) {
-        if(d.name == 'Escherichia coli'){
-          return 5;
-        }else
         if (d.pathogenic) {
           return 2;
         } else {
@@ -508,9 +513,17 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
           return '#000000';
         // }
       })
-      .style("fill", function(d){
-        return colorScale(d3.sum(d.percentage));
-      });
+      .style("fill", function(d) {
+          if (d['node_pos'] == 3) {
+            return "#d3d3d3";
+          } else if (d['node_pos'] == 2) {
+            return "#5ac1e0";
+          } else if (d['node_pos'] == 1) {
+            return "#adadad";
+          } else {
+            return "#f4aa4e";
+          }
+        });
 
     circle.exit()
       .remove();
