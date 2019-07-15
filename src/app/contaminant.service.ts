@@ -18,19 +18,22 @@ export class ContaminantService {
   private jsonData: Taxon = new Taxon();
   private selectedSample: string;
   private selectedTaxon: string;
+  private rootReads: number[][];
   private currentPoints: [{	// List of dict for d3 data()
     "control": number,
     "sample": number,
     "name": string,
     "node_pos": number,
-    "pathogenic": number
+    "pathogenic": number,
+    "tax_id": number
   }];
   private totalPoints: [{
     "control": number,
     "sample": number[],
     "percentage": number[],
     "name": string,
-    "pathogenic": number
+    "pathogenic": number,
+    "tax_id": number
   }];
   private plotTotalPoints: [{
     "control": number,
@@ -40,7 +43,28 @@ export class ContaminantService {
     "pathogenic": number,
     "tsneX":number,
     "tsneY":number,
-    "node_pos":number
+    "node_pos":number,
+    "tax_id": number
+  }];
+  private SamplePoints: [{
+    "control": number[],
+    "sample": number[],
+    "percentage": number[][],
+    "name": string[],
+    "pathogenic": number[],
+    "tsneX":number,
+    "tsneY":number,
+    "tax_id": number[][]
+  }];
+  private plotSamplePoints: [{
+    // "control": number[],
+    // "sample": number[],
+    // "percentage": number[][],
+    "name": string,
+    // "pathogenic": number[],
+    "tsneX":number,
+    "tsneY":number,
+    // "tax_id": number[][]
   }];
   // Sample data elements
   // 0 - control reads
@@ -53,7 +77,8 @@ export class ContaminantService {
     "sample": number[],
     "name": string[],
     "node_pos": number[],
-    "pathogenic": number[]
+    "pathogenic": number[],
+    "tax_id": number[]
   };
   private train: {
     "ctrl_reads_log": number[],
@@ -79,6 +104,7 @@ export class ContaminantService {
     "name": string,
     "node_pos": number,
     "pathogenic": number
+    "tax_id": number,
   }] {
     return this.currentPoints;
   }
@@ -90,10 +116,26 @@ export class ContaminantService {
     "name": string,
     "pathogenic": number
     "tsneX":number,
-    "tsneY":number
+    "tsneY":number,
+    "node_pos":number,
+    "tax_id": number
   }] {
     return this.plotTotalPoints;
   }
+
+    getPlotSamplePoints(): [{
+      // "control": number[],
+      // "sample": number[],
+      // "percentage": number[][],
+      "name": string,
+      // "pathogenic": number[],
+      "tsneX":number,
+      "tsneY":number,
+      // "tax_id": number[][]
+    }] {
+      return this.plotSamplePoints;
+    }
+
 
   getPointCounts(): number[] {
     return this.pointCounts;
@@ -106,15 +148,15 @@ export class ContaminantService {
         catchError(this.handleError('getTree', []))
       );
   }
-
-  cutScores(d: Taxon, threshold: number, selectedSample: string) {
-    let num = d.file.indexOf(selectedSample)
-    this.cutScoreNode(d, threshold, num);
+  cutScores(d: Taxon, threshold: number) {
+    this.cutScoresNode(d, threshold);
     this.sumTaxReads(d);
+    this.rootReads = [d.taxon_reads,[d.ctrl_taxon_reads]];
     return d;
   }
 
-  cutScoreNode(d: Taxon, threshold: number, j: number) {
+
+  cutScoresNode(d: Taxon, threshold: number) {
     let ctrlscorearray = null;
     ctrlscorearray = d.ctrl_forward_score_distribution.split(",");
     for (let k = 0; k < 10; k++) {
@@ -122,23 +164,27 @@ export class ContaminantService {
         if (d.ctrl_reads - ctrlscorearray[k] <= 0 || isNaN(d.ctrl_reads - ctrlscorearray[k])) {
           d.ctrl_reads = 0;
         } else {
-          d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k];
+          d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k]
         }
       }
     }
-    let scorearray = null;
-    scorearray = d.forward_score_distribution[j].split(",");
-    for (let k = 0; k < 10; k++) {
-      if (((k / 10) + 0.1) < threshold) {
-        if (d.reads[j] - scorearray[k] < 0) {
-          d.reads[j] = 0;
-        } else {
-          d.reads[j] = d.reads[j] - scorearray[k];
+    for (let j = 0; j < d.file.length; j++) {
+      let scorearray = null;
+      scorearray = d.forward_score_distribution[j].split(",");
+      for (let k = 0; k < 10; k++) {
+        if (((k / 10) + 0.1) < threshold) {
+          if (d.reads[j] - scorearray[k] < 0) {
+            d.reads[j] = 0;
+          } else {
+            d.reads[j] = d.reads[j] - scorearray[k];
+          }
         }
       }
     }
-    for (let i = 0; i < d.children.length; i++) {
-      this.cutScoreNode(d.children[i], threshold, j);
+    if (d.children) {
+      for (let i = 0; i < d.children.length; i++) {
+        this.cutScoresNode(d.children[i], threshold);
+      }
     }
   }
 
@@ -169,6 +215,68 @@ export class ContaminantService {
     }
     return [d.taxon_reads, [d.ctrl_taxon_reads]];
   }
+  // cutScores(d: Taxon, threshold: number, selectedSample: string) {
+  //   let num = d.file.indexOf(selectedSample)
+  //   this.cutScoreNode(d, threshold, num);
+  //   this.sumTaxReads(d);
+  //   return d;
+  // }
+  //
+  // cutScoreNode(d: Taxon, threshold: number, j: number) {
+  //   let ctrlscorearray = null;
+  //   ctrlscorearray = d.ctrl_forward_score_distribution.split(",");
+  //   for (let k = 0; k < 10; k++) {
+  //     if (((k / 10) + 0.1) < threshold) {
+  //       if (d.ctrl_reads - ctrlscorearray[k] <= 0 || isNaN(d.ctrl_reads - ctrlscorearray[k])) {
+  //         d.ctrl_reads = 0;
+  //       } else {
+  //         d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k];
+  //       }
+  //     }
+  //   }
+  //   let scorearray = null;
+  //   scorearray = d.forward_score_distribution[j].split(",");
+  //   for (let k = 0; k < 10; k++) {
+  //     if (((k / 10) + 0.1) < threshold) {
+  //       if (d.reads[j] - scorearray[k] < 0) {
+  //         d.reads[j] = 0;
+  //       } else {
+  //         d.reads[j] = d.reads[j] - scorearray[k];
+  //       }
+  //     }
+  //   }
+  //   for (let i = 0; i < d.children.length; i++) {
+  //     this.cutScoreNode(d.children[i], threshold, j);
+  //   }
+  // }
+  //
+  // sumTaxReads(d: Taxon): number[][] {
+  //   let childreads: number[] = Array(d.file.length).fill(0);
+  //   let child_ctrlreads: number = 0;
+  //   if (d.children) {
+  //     // childreads = childreads + d.children.forEach(this.sumTaxReads);
+  //     for (let i = 0; i < d.children.length; i++) {
+  //       let tmp = this.sumTaxReads(d.children[i])
+  //       childreads = tmp[0].map(function(num, idx) {
+  //         return num + childreads[idx];
+  //       })
+  //       child_ctrlreads = child_ctrlreads + tmp[1][0];
+  //     }
+  //   }
+  //   for (let j = 0; j < d.file.length; j++) {
+  //     if (isNaN(d.reads[j])) {
+  //       d.taxon_reads[j] = childreads[j] + 0
+  //     } else {
+  //       d.taxon_reads[j] = d.reads[j] + childreads[j]
+  //     }
+  //   }
+  //   if (isNaN(d.ctrl_taxon_reads)) {
+  //     d.ctrl_taxon_reads = 0 + child_ctrlreads;
+  //   } else {
+  //     d.ctrl_taxon_reads = d.ctrl_reads + child_ctrlreads;
+  //   }
+  //   return [d.taxon_reads, [d.ctrl_taxon_reads]];
+  // }
 
   findTaxons(d: Taxon) {
     this.sampleData = {
@@ -176,7 +284,8 @@ export class ContaminantService {
       "sample": [],
       "name": [],
       "node_pos": [],
-      "pathogenic": []
+      "pathogenic": [],
+      "tax_id": []
     };
     this.searchTree(d);
   }
@@ -184,11 +293,12 @@ export class ContaminantService {
   searchTree(d: Taxon): void {
     let index = d.file.indexOf(this.selectedSample);
     if (d.rank == this.selectedTaxon) {
-      if (d.reads[index] > 0 && d.taxon_name != "Homo sapiens") {
+      if (d.taxon_reads[index] > 0 && d.taxon_name != "Homo sapiens") {
         this.sampleData["control"].push(d.ctrl_reads);
-        this.sampleData["sample"].push(d.reads[index]);
+        this.sampleData["sample"].push(d.taxon_reads[index]);
         this.sampleData["name"].push(d.taxon_name);
         this.sampleData["pathogenic"].push(d.pathogenic);
+        this.sampleData["tax_id"].push(d.tax_id);
       }
     }
     for (let i = 0; i < d.children.length; i++) {
@@ -202,7 +312,8 @@ export class ContaminantService {
       "sample": number,
       "name": string,
       "node_pos": number,
-      "pathogenic": number
+      "pathogenic": number,
+      "tax_id": number
     }];
     this.train = {
       "ctrl_reads_log": _.cloneDeep(this.sampleData.control).map((x) => Math.log10(x + 1)),
@@ -214,13 +325,14 @@ export class ContaminantService {
         "sample": Math.log10(this.sampleData.sample[j] + 1  + 0.15 * Math.random()),
         "node_pos": 0,
         "name": this.sampleData.name[j],
-        "pathogenic": this.sampleData.pathogenic[j]
+        "pathogenic": this.sampleData.pathogenic[j],
+        "tax_id": this.sampleData.tax_id[j]
       });
     };
     for (let j = 0; j < this.plotTotalPoints.length; j++) {
       this.plotTotalPoints[j].node_pos=3;
       for (let k = 0; k < this.currentPoints.length; k++) {
-        if(this.currentPoints[k].name == this.plotTotalPoints[j].name) {
+        if(this.currentPoints[k].tax_id == this.plotTotalPoints[j].tax_id) {
           this.plotTotalPoints[j].node_pos = 0;
         }
       }
@@ -251,7 +363,6 @@ export class ContaminantService {
           return l;
         });
       });
-      console.log(epoch);
     }
     console.log("Finished");
 
@@ -311,19 +422,15 @@ export class ContaminantService {
     return this.currentPoints;
   }
 
-  findTotals(d: Taxon, rootReads: number[][]) {
+  findTotals(d: Taxon, rootReads: number[][], selectedsample: string) {
     this.totalPoints = {
       "control":[],
       "sample":[],
       "percentage":[],
       "name":[],
-      "pathogenic":[]
+      "pathogenic":[],
+      "tax_id": []
     }
-    // this.totalPoints["control"]=[];
-    // this.totalPoints["sample"]=[];
-    // this.totalPoints["percentage"]=[];
-    // this.totalPoints["name"]=[];
-    // this.totalPoints["pathogenic"]=[];
     this.plotTotalPoints = Array() as [{
       "control": number,
       "sample": number[],
@@ -332,37 +439,88 @@ export class ContaminantService {
       "pathogenic": number,
       "tsneX": number,
       "tsneY": number,
-      "node_pos":number
+      "node_pos":number,
+      "tax_id": number
     }];
-    this.countTotals(d, rootReads);
+    this.countTotals(d, rootReads, selectedsample);
+  }
+
+  countTotals(d: Taxon, rootReads: number[][], selectedsample: string): void {
+    // console.log(d.taxon_reads.map(function(n,i){return (n/ rootReads[0][i]);}).push(d.ctrl_reads));
+    let index = d.file.indexOf(selectedsample);
+    // console.log(index);
+    if (d.rank == "species" && d.taxon_name != "Homo sapiens" && d.taxon_reads[index]>0) {
+      this.totalPoints["control"].push(d.ctrl_taxon_reads);
+      this.totalPoints["sample"].push(d.taxon_reads);
+      let percentarray = []
+      percentarray.push(100*d.ctrl_taxon_reads/rootReads[1][0])
+      this.totalPoints["percentage"].push(d.taxon_reads.map(function(n,i){return (100*n/rootReads[0][i]);}).concat(percentarray));
+      this.totalPoints["name"].push(d.taxon_name);
+      this.totalPoints["pathogenic"].push(d.pathogenic);
+      this.totalPoints["tax_id"].push(d.tax_id);
+    }
+
+    for (let i = 0; i < d.children.length; i++) {
+      this.countTotals(d.children[i], rootReads, selectedsample);
+    }
   }
 
 
-  countTotals(d: Taxon, rootReads: number[][]): void {
-    if (d.rank == "species" && d.taxon_name != "Homo sapiens" && d.taxon_reads.some(x=>x>0)) {
-      this.totalPoints["control"].push(d.ctrl_reads);
-      this.totalPoints["sample"].push(d.taxon_reads);
-      this.totalPoints["percentage"].push(d.taxon_reads.map(function(n,i){return n / rootReads[0][i];}));
-      this.totalPoints["name"].push(d.taxon_name);
-      this.totalPoints["pathogenic"].push(d.pathogenic);
+    sampleFindTotals(d: Taxon, rootReads: number[][]) {
+      this.SamplePoints =  {
+        "control": [],
+        "sample": [],
+        "percentage": [],
+        "name": [],
+        "pathogenic": [],
+        "tsneX": [],
+        "tsneY": [],
+        "tax_id": []
+      };
+      this.plotSamplePoints =  Array() as [{
+        // "control": number[],
+        // "sample": number[],
+        // "percentage": number[][],
+        "name": string,
+        // "pathogenic": number[],
+        "tsneX":number,
+        "tsneY":number,
+        // "tax_id": number[][]
+      }];
+      for (let i = 0; i < d.taxon_reads.length; i++){
+        this.SamplePoints["percentage"][i]=[];
+      }
+      this.sampleCountTotals(d, rootReads);
     }
+
+  // counting for the sample comparison TSNE:
+  sampleCountTotals(d: Taxon, rootReads: number[][]): void {
+    if (d.rank == "species" && d.taxon_name != "Homo sapiens" && d.taxon_reads.some(x=>x>1)) {
+      this.SamplePoints["control"].push(d.ctrl_taxon_reads);
+      this.SamplePoints["name"].push(d.taxon_name);
+      this.SamplePoints["pathogenic"].push(d.pathogenic);
+      this.SamplePoints["tax_id"].push(d.tax_id);
+      for (let i = 0; i < d.taxon_reads.length; i++){
+        this.SamplePoints['percentage'][i].push(100*d.taxon_reads[i]/rootReads[0][i]);
+      }
+    }
+
     for (let i = 0; i < d.children.length; i++) {
-      this.countTotals(d.children[i], rootReads);
+      this.sampleCountTotals(d.children[i], rootReads);
     }
   }
 
   tsneModel(): void {
-    console.log(this.totalPoints['sample'].length);
     let model = new TSNE({
-      dim: this.totalPoints['sample'][0].length,
-      perplexity: 30.0,
-      earlyExaggeration: 4.0,
+      dim: this.totalPoints['sample'][0].length + 1,
+      perplexity: 1.0,
+      earlyExaggeration: 4,
       learningRate: 100.0,
       nIter: 5000,
-      metric: 'jaccard'
+      metric: 'euclidian'
     });
     model.init({
-      data: this.totalPoints['percentage'],
+      data:this.totalPoints['percentage'],
       type: 'dense'
     });
     let [errr, iter] = model.run();
@@ -382,11 +540,52 @@ export class ContaminantService {
         "pathogenic": this.totalPoints['pathogenic'][i],
         "tsneX": output[i][0],
         "tsneY": output[i][1],
-        "node_pos": 3
+        "node_pos": 3,
+        "tax_id": this.totalPoints['tax_id'][i]
       });
     }
-    console.log(this.plotTotalPoints);
     // `outputScaled` is `output` scaled to a range of [-1, 1]
     // let outputScaled = model.getOutputScaled();
   }
+
+  tsneSampleModel(d: Taxon): void {
+    console.log(this.SamplePoints)
+    let model = new TSNE({
+      dim: this.SamplePoints['name'].length,
+      perplexity: 3,
+      earlyExaggeration: 2,
+      learningRate: 10,
+      nIter: 5000,
+      metric: 'manhattan'
+    });
+    model.init({
+      data:this.SamplePoints['percentage'],
+      type: 'dense'
+    });
+    let [errr, iter] = model.run();
+    // rerun without re-calculating pairwise distances, etc.
+    [errr, iter] = model.rerun();
+    // `output` is unpacked ndarray (regular nested javascript array)
+    let output: number[][];
+    output = model.getOutputScaled();
+    console.log(output);
+    console.log("OUTPUT ^")
+    // output = model.getOutputScaled();
+
+    for (let i = 0; i<output.length; i++){
+      this.plotSamplePoints.push({
+        // "control": this.totalPoints['control'][i],
+        // "sample": this.totalPoints['sample'][i],
+        // "percentage": this.totalPoints['percentage'][i],
+        "name": d.file[i],
+        // "pathogenic": this.totalPoints['pathogenic'][i],
+        "tsneX": output[i][0],
+        "tsneY": output[i][1],
+        // "tax_id": this.totalPoints['tax_id'][i]
+      });
+    }
+    // `outputScaled` is `output` scaled to a range of [-1, 1]
+    // let outputScaled = model.getOutputScaled();
+  }
+
 }
