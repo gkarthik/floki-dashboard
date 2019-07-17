@@ -8,6 +8,8 @@ import * as _ from "lodash";
 import * as tf from '@tensorflow/tfjs';
 import TSNE from 'tsne-js';
 
+import kmeans from 'ml-kmeans';
+
 import { Taxon } from './taxon';
 
 @Injectable({
@@ -44,10 +46,12 @@ export class ContaminantService {
     "tsneX":number,
     "tsneY":number,
     "node_pos":number,
-    "tax_id": number
+    "tax_id": number,
+    "clusters": number
   }];
   private SamplePoints: [{
     "control": number[],
+    "ctrl_percentage": number[],
     "sample": number[],
     "percentage": number[][],
     "name": string[],
@@ -61,6 +65,7 @@ export class ContaminantService {
     // "sample": number[],
     // "percentage": number[][],
     "name": string,
+    "cluster": number,
     // "pathogenic": number[],
     "tsneX":number,
     "tsneY":number,
@@ -118,7 +123,8 @@ export class ContaminantService {
     "tsneX":number,
     "tsneY":number,
     "node_pos":number,
-    "tax_id": number
+    "tax_id": number,
+    "clusters": number
   }] {
     return this.plotTotalPoints;
   }
@@ -128,6 +134,7 @@ export class ContaminantService {
       // "sample": number[],
       // "percentage": number[][],
       "name": string,
+      "cluster": number,
       // "pathogenic": number[],
       "tsneX":number,
       "tsneY":number,
@@ -440,7 +447,8 @@ export class ContaminantService {
       "tsneX": number,
       "tsneY": number,
       "node_pos":number,
-      "tax_id": number
+      "tax_id": number,
+      "clusters": number
     }];
     this.countTotals(d, rootReads, selectedsample);
   }
@@ -469,6 +477,7 @@ export class ContaminantService {
     sampleFindTotals(d: Taxon, rootReads: number[][]) {
       this.SamplePoints =  {
         "control": [],
+        "ctrl_percentage": [],
         "sample": [],
         "percentage": [],
         "name": [],
@@ -482,6 +491,7 @@ export class ContaminantService {
         // "sample": number[],
         // "percentage": number[][],
         "name": string,
+        "cluster": number,
         // "pathogenic": number[],
         "tsneX":number,
         "tsneY":number,
@@ -495,11 +505,13 @@ export class ContaminantService {
 
   // counting for the sample comparison TSNE:
   sampleCountTotals(d: Taxon, rootReads: number[][]): void {
+    // setting .som >100 increases consistency of plot
     if (d.rank == "species" && d.taxon_name != "Homo sapiens" && d.taxon_reads.some(x=>x>1)) {
       this.SamplePoints["control"].push(d.ctrl_taxon_reads);
       this.SamplePoints["name"].push(d.taxon_name);
       this.SamplePoints["pathogenic"].push(d.pathogenic);
       this.SamplePoints["tax_id"].push(d.tax_id);
+      this.SamplePoints["ctrl_percentage"].push(100*d.ctrl_taxon_reads/rootReads[1][0])
       for (let i = 0; i < d.taxon_reads.length; i++){
         this.SamplePoints['percentage'][i].push(100*d.taxon_reads[i]/rootReads[0][i]);
       }
@@ -512,10 +524,10 @@ export class ContaminantService {
 
   tsneModel(): void {
     let model = new TSNE({
-      dim: this.totalPoints['sample'][0].length + 1,
-      perplexity: 1.0,
-      earlyExaggeration: 4,
-      learningRate: 100.0,
+      dim: 2,
+      perplexity: 10.0,
+      earlyExaggeration: 2,
+      learningRate: 10.0,
       nIter: 5000,
       metric: 'euclidian'
     });
@@ -531,6 +543,9 @@ export class ContaminantService {
     output = model.getOutput();
     // output = model.getOutputScaled();
 
+    let ans = kmeans(this.totalPoints['percentage'], 5, {seed: 1234567891234, initialization: 'mostDistant'});
+    console.log(ans["clusters"])
+
     for (let i = 0; i<output.length; i++){
       this.plotTotalPoints.push({
         "control": this.totalPoints['control'][i],
@@ -541,6 +556,7 @@ export class ContaminantService {
         "tsneX": output[i][0],
         "tsneY": output[i][1],
         "node_pos": 3,
+        "clusters": ans["clusters"][i],
         "tax_id": this.totalPoints['tax_id'][i]
       });
     }
@@ -551,33 +567,39 @@ export class ContaminantService {
   tsneSampleModel(d: Taxon): void {
     console.log(this.SamplePoints)
     let model = new TSNE({
-      dim: this.SamplePoints['name'].length,
-      perplexity: 3,
-      earlyExaggeration: 2,
+      dim: 2,
+      perplexity: 2,
+      earlyExaggeration: 4,
       learningRate: 10,
       nIter: 5000,
-      metric: 'manhattan'
+      metric: 'manhattan',
     });
+    let tsnesampledata = this.SamplePoints['percentage'].concat([this.SamplePoints['ctrl_percentage']])
+    console.log(tsnesampledata);
     model.init({
-      data:this.SamplePoints['percentage'],
+      data: tsnesampledata,
       type: 'dense'
     });
+
     let [errr, iter] = model.run();
     // rerun without re-calculating pairwise distances, etc.
     [errr, iter] = model.rerun();
     // `output` is unpacked ndarray (regular nested javascript array)
     let output: number[][];
     output = model.getOutputScaled();
-    console.log(output);
-    console.log("OUTPUT ^")
     // output = model.getOutputScaled();
+    let names = d.file.concat(['ctrl']);
+
+    let ans = kmeans(tsnesampledata, 5, {seed: 1234567891234, initialization: 'kmeans++'});
+    // console.log(ans["clusters"])
 
     for (let i = 0; i<output.length; i++){
       this.plotSamplePoints.push({
         // "control": this.totalPoints['control'][i],
         // "sample": this.totalPoints['sample'][i],
         // "percentage": this.totalPoints['percentage'][i],
-        "name": d.file[i],
+        "name": names[i],
+        "cluster": ans["clusters"][i],
         // "pathogenic": this.totalPoints['pathogenic'][i],
         "tsneX": output[i][0],
         "tsneY": output[i][1],
