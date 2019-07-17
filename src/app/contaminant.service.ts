@@ -10,6 +10,8 @@ import TSNE from 'tsne-js';
 
 import kmeans from 'ml-kmeans';
 
+import { UMAP } from 'umap-js';
+
 import { Taxon } from './taxon';
 
 @Injectable({
@@ -456,7 +458,8 @@ export class ContaminantService {
   countTotals(d: Taxon, rootReads: number[][], selectedsample: string): void {
     // console.log(d.taxon_reads.map(function(n,i){return (n/ rootReads[0][i]);}).push(d.ctrl_reads));
     let index = d.file.indexOf(selectedsample);
-    // console.log(index);
+    // console.log(index); && d.taxon_reads[index]>0
+    // d.taxon_reads.some(x=>x>0)
     if (d.rank == "species" && d.taxon_name != "Homo sapiens" && d.taxon_reads[index]>0) {
       this.totalPoints["control"].push(d.ctrl_taxon_reads);
       this.totalPoints["sample"].push(d.taxon_reads);
@@ -523,25 +526,29 @@ export class ContaminantService {
   }
 
   tsneModel(): void {
-    let model = new TSNE({
-      dim: 2,
-      perplexity: 10.0,
-      earlyExaggeration: 2,
-      learningRate: 10.0,
-      nIter: 5000,
-      metric: 'euclidian'
-    });
-    model.init({
-      data:this.totalPoints['percentage'],
-      type: 'dense'
-    });
-    let [errr, iter] = model.run();
-    // rerun without re-calculating pairwise distances, etc.
-    [errr, iter] = model.rerun();
-    // `output` is unpacked ndarray (regular nested javascript array)
-    let output: number[][];
-    output = model.getOutput();
-    // output = model.getOutputScaled();
+    // let model = new TSNE({
+    //   dim: 2,
+    //   perplexity: 10.0,
+    //   earlyExaggeration: 2,
+    //   learningRate: 10.0,
+    //   nIter: 5000,
+    //   metric: 'euclidian'
+    // });
+    // model.init({
+    //   data:this.totalPoints['percentage'],
+    //   type: 'dense'
+    // });
+
+    let umap = new UMAP({minDist: 0.4});
+    let output = umap.fit(this.totalPoints['percentage']);
+
+    // let [errr, iter] = model.run();
+    // // rerun without re-calculating pairwise distances, etc.
+    // [errr, iter] = model.rerun();
+    // // `output` is unpacked ndarray (regular nested javascript array)
+    // let output: number[][];
+    // output = model.getOutput();
+    // // output = model.getOutputScaled();
 
     let ans = kmeans(this.totalPoints['percentage'], 5, {seed: 1234567891234, initialization: 'mostDistant'});
     console.log(ans["clusters"])
@@ -565,32 +572,35 @@ export class ContaminantService {
   }
 
   tsneSampleModel(d: Taxon): void {
-    console.log(this.SamplePoints)
-    let model = new TSNE({
-      dim: 2,
-      perplexity: 2,
-      earlyExaggeration: 4,
-      learningRate: 10,
-      nIter: 5000,
-      metric: 'manhattan',
-    });
+    // console.log(this.SamplePoints)
+    // let model = new TSNE({
+    //   dim: 2,
+    //   perplexity: 2,
+    //   earlyExaggeration: 4,
+    //   learningRate: 10,
+    //   nIter: 5000,
+    //   metric: 'manhattan',
+    // });
     let tsnesampledata = this.SamplePoints['percentage'].concat([this.SamplePoints['ctrl_percentage']])
     console.log(tsnesampledata);
-    model.init({
-      data: tsnesampledata,
-      type: 'dense'
-    });
-
-    let [errr, iter] = model.run();
-    // rerun without re-calculating pairwise distances, etc.
-    [errr, iter] = model.rerun();
-    // `output` is unpacked ndarray (regular nested javascript array)
-    let output: number[][];
-    output = model.getOutputScaled();
+// Math.round(tsnesampledata.length/3)
+    let umap = new UMAP({minDist: 0.7, nNeighbors: 2});
+    let output = umap.fit(tsnesampledata);
+    // model.init({
+    //   data: tsnesampledata,
+    //   type: 'dense'
+    // });
+    //
+    // let [errr, iter] = model.run();
+    // // rerun without re-calculating pairwise distances, etc.
+    // [errr, iter] = model.rerun();
+    // // `output` is unpacked ndarray (regular nested javascript array)
+    // let output: number[][];
+    // output = model.getOutputScaled();
     // output = model.getOutputScaled();
     let names = d.file.concat(['ctrl']);
 
-    let ans = kmeans(tsnesampledata, 5, {seed: 1234567891234, initialization: 'kmeans++'});
+    let ans = kmeans(tsnesampledata, 5, {seed:123123456789, initialization: 'kmeans++'});
     // console.log(ans["clusters"])
 
     for (let i = 0; i<output.length; i++){

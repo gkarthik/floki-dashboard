@@ -200,14 +200,14 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("text-anchor", "middle")
       .attr("transform", "translate(" + (this.canvas_width / 2) + "," + 30 + ")")
       .style("font-size", "20px")
-      .text("t-SNE Analysis");
+      .text("UMAP of Taxa in Selection");
 
     svg.append("text")
       .attr("transform",
         "translate(" + (this.canvas_width / 2) + " ," + (this.canvas_height - 12) + ")")
       .style("text-anchor", "middle")
       .style("font-size", "20px")
-      .text("TSNE 1");
+      .text("UMAP 1");
 
     svg.append("text")
       .attr("id", "ylabel")
@@ -216,7 +216,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("y", 14)
       .style("font-size", "20px")
       .attr("transform", "rotate(-90)")
-      .text("TSNE 2");
+      .text("UMAP 2");
 
     svg.append("text")
       .attr("text-anchor", "end")
@@ -279,14 +279,14 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("text-anchor", "middle")
       .attr("transform", "translate(" + (this.canvas_width / 2) + "," + 30 + ")")
       .style("font-size", "20px")
-      .text("t-SNE Analysis of Samples");
+      .text("UMAP Analysis of all Samples");
 
     svg.append("text")
       .attr("transform",
         "translate(" + (this.canvas_width / 2) + " ," + (this.canvas_height - 12) + ")")
       .style("text-anchor", "middle")
       .style("font-size", "20px")
-      .text("TSNE 1");
+      .text("UMAP 1");
 
     svg.append("text")
       .attr("id", "ylabel")
@@ -295,7 +295,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("y", 14)
       .style("font-size", "20px")
       .attr("transform", "rotate(-90)")
-      .text("TSNE 2");
+      .text("UMAP 2");
 
     svg.append("text")
       .attr("text-anchor", "end")
