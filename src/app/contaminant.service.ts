@@ -12,6 +12,8 @@ import kmeans from 'ml-kmeans';
 
 import { UMAP } from 'umap-js';
 
+import clustering from 'density-clustering';
+
 import { Taxon } from './taxon';
 
 @Injectable({
@@ -145,7 +147,6 @@ export class ContaminantService {
       return this.plotSamplePoints;
     }
 
-
   getPointCounts(): number[] {
     return this.pointCounts;
   }
@@ -163,7 +164,6 @@ export class ContaminantService {
     this.rootReads = [d.taxon_reads,[d.ctrl_taxon_reads]];
     return d;
   }
-
 
   cutScoresNode(d: Taxon, threshold: number) {
     let ctrlscorearray = null;
@@ -407,7 +407,7 @@ export class ContaminantService {
         this.pointCounts[0]+=1
       }
       for(let k = 0; k < this.plotTotalPoints.length; k++){
-        if(this.currentPoints[j].name==this.plotTotalPoints[k].name){
+        if(this.currentPoints[j].tax_id==this.plotTotalPoints[k].tax_id){
           this.plotTotalPoints[k].node_pos=this.currentPoints[j].node_pos;
         }
       }
@@ -538,10 +538,6 @@ export class ContaminantService {
     //   data:this.totalPoints['percentage'],
     //   type: 'dense'
     // });
-
-    let umap = new UMAP({minDist: 0.4});
-    let output = umap.fit(this.totalPoints['percentage']);
-
     // let [errr, iter] = model.run();
     // // rerun without re-calculating pairwise distances, etc.
     // [errr, iter] = model.rerun();
@@ -550,8 +546,18 @@ export class ContaminantService {
     // output = model.getOutput();
     // // output = model.getOutputScaled();
 
-    let ans = kmeans(this.totalPoints['percentage'], 5, {seed: 1234567891234, initialization: 'mostDistant'});
-    console.log(ans["clusters"])
+    let umap = new UMAP({minDist: 0.4});
+    let output = umap.fit(this.totalPoints['percentage']);
+
+    let dbscan = new clustering.DBSCAN();
+    let dbclusters = dbscan.run(this.totalPoints['percentage'], 5, 1);
+    console.log(dbclusters);
+    console.log(this.totalPoints['name'][dbclusters[1][0]]);
+    console.log(this.totalPoints['name'][dbclusters[2][0]]);
+
+    console.log(this.totalPoints['percentage'].length);
+
+    let ans = kmeans(this.totalPoints['percentage'], 5, {seed: 1234567891234, initialization: 'kmeans++'});
 
     for (let i = 0; i<output.length; i++){
       this.plotTotalPoints.push({
@@ -582,8 +588,7 @@ export class ContaminantService {
     //   metric: 'manhattan',
     // });
     let tsnesampledata = this.SamplePoints['percentage'].concat([this.SamplePoints['ctrl_percentage']])
-    console.log(tsnesampledata);
-// Math.round(tsnesampledata.length/3)
+    // Math.round(tsnesampledata.length/3)
     let umap = new UMAP({minDist: 0.7, nNeighbors: 2});
     let output = umap.fit(tsnesampledata);
     // model.init({
@@ -598,6 +603,12 @@ export class ContaminantService {
     // let output: number[][];
     // output = model.getOutputScaled();
     // output = model.getOutputScaled();
+    // console.log(tsnesampledata);
+    // let pca = new PCA(tsnesampledata);
+    // console.log(pca["U"].data);
+    // let boutput = pca["U"].data;
+    // console.log(pca.getExplainedVariance());
+    // debugger;
     let names = d.file.concat(['ctrl']);
 
     let ans = kmeans(tsnesampledata, 5, {seed:123123456789, initialization: 'kmeans++'});
@@ -611,8 +622,8 @@ export class ContaminantService {
         "name": names[i],
         "cluster": ans["clusters"][i],
         // "pathogenic": this.totalPoints['pathogenic'][i],
-        "tsneX": output[i][0],
-        "tsneY": output[i][1],
+        "tsneX": output[i][1],
+        "tsneY": output[i][0],
         // "tax_id": this.totalPoints['tax_id'][i]
       });
     }

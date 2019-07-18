@@ -44,7 +44,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     this.selectedTaxon = "species";
     this.jsonData = _;
     this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
-    this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, 0.8);
+    this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, 1);
     let rootReads = this.taxonomyTreeService.getRootReads();
     this.initializePlot();
     this.contaminantService.sampleFindTotals(this.jsonData, rootReads);
@@ -59,9 +59,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
     this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, this.scoreThreshold);
     this.tsneModel(this.selectedSample);
+    this.tsnePlot();
     this.contaminantService.prepareAnalysis(this.selectedSample, this.selectedTaxon); // Sets current points in service
     this.updateplot()
-    this.tsnePlot();
     this.contaminantService.trainAndPredict().then(
       pred => {
         this.updateplot(),
@@ -556,11 +556,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
   tsneModel(selectedsample: string){
     console.log(selectedsample);
-    // let reducedTree = this.taxonomyTreeService.cutScores(this.jsonData, 0.7);
     let rootReads = this.taxonomyTreeService.getRootReads();
     this.contaminantService.findTotals(this.jsonData, rootReads, selectedsample);
     let model = this.contaminantService.tsneModel();
-    // this.tsnePlot();
     return model;
   }
 
@@ -616,13 +614,28 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("y", function(d) {
         return yScale(d.tsneY);
       })
-      .attr("r", function(d) {
-        if (d.pathogenic) {
-          return 5;
-        } else {
-          return 4;
-        }
-      })
+      .style("r", function(d) {
+          if (d.node_pos == 3) {
+            return 4;
+          } else if (d.node_pos == 2) {
+            if(d.pathogenic){
+              return 5;
+            }else{
+              return 4;
+            }
+          } else if (d.node_pos == 1) {
+            return 3;
+          } else {
+            return 2;
+          }
+        })
+      // .attr("r", function(d) {
+      //   if (d.pathogenic) {
+      //     return 5;
+      //   } else {
+      //     return 4;
+      //   }
+      // })
       .attr("cx", function(d) {
         return xScale(d.tsneX);
       })
@@ -668,13 +681,28 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("y", function(d) {
         return yScale(d.tsneY);
       })
-      .attr("r", function(d) {
-        if (d["pathogenic"]) {
-          return 5;
-        } else {
-          return 4;
-        }
-      })
+      .style("r", function(d) {
+          if (d.node_pos == 3) {
+            return 4;
+          } else if (d.node_pos == 2) {
+            if(d.pathogenic){
+              return 5;
+            }else{
+              return 4;
+            }
+          } else if (d.node_pos == 1) {
+            return 3;
+          } else {
+            return 2;
+          }
+        })
+      // .attr("r", function(d) {
+      //   if (d["pathogenic"]) {
+      //     return 5;
+      //   } else {
+      //     return 4;
+      //   }
+      // })
       .attr("cx", function(d) {
         return xScale(d.tsneX);
       })
