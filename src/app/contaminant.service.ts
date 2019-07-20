@@ -25,7 +25,7 @@ export class ContaminantService {
   private selectedSample: string;
   private selectedTaxon: string;
   private rootReads: number[][];
-  private currentPoints: [{	// List of dict for d3 data()
+  private currentPoints: [{	// List of dict for d3 data() for scatterplot
     "control": number,
     "sample": number,
     "name": string,
@@ -33,7 +33,7 @@ export class ContaminantService {
     "pathogenic": number,
     "tax_id": number
   }];
-  private totalPoints: [{
+  private totalPoints: [{ // dict of lists for clusterplot 1
     "control": number,
     "sample": number[],
     "percentage": number[],
@@ -41,7 +41,7 @@ export class ContaminantService {
     "pathogenic": number,
     "tax_id": number
   }];
-  private plotTotalPoints: [{
+  private plotTotalPoints: [{ // List of dict for d3 data() for clusterplot 1
     "control": number,
     "sample": number[],
     "percentage": number[],
@@ -53,7 +53,7 @@ export class ContaminantService {
     "tax_id": number,
     "clusters": number
   }];
-  private SamplePoints: [{
+  private SamplePoints: [{ // dict of lists for clusterplot 2
     "control": number[],
     "ctrl_percentage": number[],
     "sample": number[],
@@ -64,24 +64,14 @@ export class ContaminantService {
     "tsneY":number,
     "tax_id": number[][]
   }];
-  private plotSamplePoints: [{
-    // "control": number[],
-    // "sample": number[],
-    // "percentage": number[][],
+  private plotSamplePoints: [{  // List of dict for d3 data() for clusterplot 2
     "name": string,
     "cluster": number,
-    // "pathogenic": number[],
     "tsneX":number,
     "tsneY":number,
-    // "tax_id": number[][]
   }];
   // Sample data elements
-  // 0 - control reads
-  // 1 - sample reads
-  // 2 - name
-  // 3 - node counts
-  // 4-  pathogenic
-  private sampleData: {
+  private sampleData: { // data parsed from the tree, for the scatter plot
     "control": number[],
     "sample": number[],
     "name": string[],
@@ -89,11 +79,18 @@ export class ContaminantService {
     "pathogenic": number[],
     "tax_id": number[]
   };
-  private train: {
+  private train: { //training data for the regression
     "ctrl_reads_log": number[],
     "taxa_reads_log": number[]
   }
-  private pointCounts: number[];
+  private pointCounts: number[]; //number of points above/below line, for scatter plot
+  private clusterCounts: [{ //output from the clustering algorithmn for clusterplot 1
+    "cluster": number,
+    "taxa": number,
+    "avg_ctrl_percentage": number,
+    "avg_sample_percentage": number[],
+    "avg_sample_percent_string": string[]
+  }]
 
   constructor(
     private http: HttpClient
@@ -106,7 +103,7 @@ export class ContaminantService {
       return of(result as T);
     };
   }
-
+  // return points for scatterplot
   getCurrentPoints(): [{
     "control": number,
     "sample": number,
@@ -117,7 +114,7 @@ export class ContaminantService {
   }] {
     return this.currentPoints;
   }
-
+  // return points for clusterplot 1
   getPlotTotalPoints(): [{
     "control": number,
     "sample": number[],
@@ -132,23 +129,28 @@ export class ContaminantService {
   }] {
     return this.plotTotalPoints;
   }
-
-    getPlotSamplePoints(): [{
-      // "control": number[],
-      // "sample": number[],
-      // "percentage": number[][],
-      "name": string,
-      "cluster": number,
-      // "pathogenic": number[],
-      "tsneX":number,
-      "tsneY":number,
-      // "tax_id": number[][]
-    }] {
-      return this.plotSamplePoints;
-    }
-
+  // return points for clusterplot 2
+  getPlotSamplePoints(): [{
+    "name": string,
+    "cluster": number,
+    "tsneX":number,
+    "tsneY":number,
+  }] {
+    return this.plotSamplePoints;
+  }
+  // return above/below line for scatterplot
   getPointCounts(): number[] {
     return this.pointCounts;
+  }
+  // return cluster information for clusterplot 1
+  getClusterCounts(): [{
+    "cluster": number,
+    "taxa": number,
+    "avg_ctrl_percentage": number,
+    "avg_sample_percentage": number[]
+    "avg_sample_percent_string": string[]
+  }] {
+    return this.clusterCounts;
   }
 
   getTree(): Observable<any> {
@@ -158,13 +160,13 @@ export class ContaminantService {
         catchError(this.handleError('getTree', []))
       );
   }
-  cutScores(d: Taxon, threshold: number) {
+  // cut the reads by forward score, then sum up from lowest branch
+  async cutScores(d: Taxon, threshold: number) {
     this.cutScoresNode(d, threshold);
     this.sumTaxReads(d);
     this.rootReads = [d.taxon_reads,[d.ctrl_taxon_reads]];
-    return d;
+    return await d;
   }
-
   cutScoresNode(d: Taxon, threshold: number) {
     let ctrlscorearray = null;
     ctrlscorearray = d.ctrl_forward_score_distribution.split(",");
@@ -196,7 +198,6 @@ export class ContaminantService {
       }
     }
   }
-
   sumTaxReads(d: Taxon): number[][] {
     let childreads: number[] = Array(d.file.length).fill(0);
     let child_ctrlreads: number = 0;
@@ -224,69 +225,24 @@ export class ContaminantService {
     }
     return [d.taxon_reads, [d.ctrl_taxon_reads]];
   }
-  // cutScores(d: Taxon, threshold: number, selectedSample: string) {
-  //   let num = d.file.indexOf(selectedSample)
-  //   this.cutScoreNode(d, threshold, num);
-  //   this.sumTaxReads(d);
-  //   return d;
-  // }
-  //
-  // cutScoreNode(d: Taxon, threshold: number, j: number) {
-  //   let ctrlscorearray = null;
-  //   ctrlscorearray = d.ctrl_forward_score_distribution.split(",");
-  //   for (let k = 0; k < 10; k++) {
-  //     if (((k / 10) + 0.1) < threshold) {
-  //       if (d.ctrl_reads - ctrlscorearray[k] <= 0 || isNaN(d.ctrl_reads - ctrlscorearray[k])) {
-  //         d.ctrl_reads = 0;
-  //       } else {
-  //         d.ctrl_reads = d.ctrl_reads - ctrlscorearray[k];
-  //       }
-  //     }
-  //   }
-  //   let scorearray = null;
-  //   scorearray = d.forward_score_distribution[j].split(",");
-  //   for (let k = 0; k < 10; k++) {
-  //     if (((k / 10) + 0.1) < threshold) {
-  //       if (d.reads[j] - scorearray[k] < 0) {
-  //         d.reads[j] = 0;
-  //       } else {
-  //         d.reads[j] = d.reads[j] - scorearray[k];
-  //       }
-  //     }
-  //   }
-  //   for (let i = 0; i < d.children.length; i++) {
-  //     this.cutScoreNode(d.children[i], threshold, j);
-  //   }
-  // }
-  //
-  // sumTaxReads(d: Taxon): number[][] {
-  //   let childreads: number[] = Array(d.file.length).fill(0);
-  //   let child_ctrlreads: number = 0;
-  //   if (d.children) {
-  //     // childreads = childreads + d.children.forEach(this.sumTaxReads);
-  //     for (let i = 0; i < d.children.length; i++) {
-  //       let tmp = this.sumTaxReads(d.children[i])
-  //       childreads = tmp[0].map(function(num, idx) {
-  //         return num + childreads[idx];
-  //       })
-  //       child_ctrlreads = child_ctrlreads + tmp[1][0];
-  //     }
-  //   }
-  //   for (let j = 0; j < d.file.length; j++) {
-  //     if (isNaN(d.reads[j])) {
-  //       d.taxon_reads[j] = childreads[j] + 0
-  //     } else {
-  //       d.taxon_reads[j] = d.reads[j] + childreads[j]
-  //     }
-  //   }
-  //   if (isNaN(d.ctrl_taxon_reads)) {
-  //     d.ctrl_taxon_reads = 0 + child_ctrlreads;
-  //   } else {
-  //     d.ctrl_taxon_reads = d.ctrl_reads + child_ctrlreads;
-  //   }
-  //   return [d.taxon_reads, [d.ctrl_taxon_reads]];
-  // }
 
+  // run find taxons and arrange points to prepare for training
+  prepareAnalysis(sample: string, taxon: string): [{
+    "control": number,
+    "sample": number,
+    "node_pos": number,
+    "name": string,
+    "pathogenic": number
+  }] {
+    this.selectedSample = sample;
+    this.selectedTaxon = taxon;
+    let data = _.cloneDeep(this.jsonData);
+    this.findTaxons(data);
+    this.arrangePoints();
+    return this.currentPoints;
+  }
+
+  // push up data from tree into the sample data, according to taxon level
   findTaxons(d: Taxon) {
     this.sampleData = {
       "control": [],
@@ -298,7 +254,6 @@ export class ContaminantService {
     };
     this.searchTree(d);
   }
-
   searchTree(d: Taxon): void {
     let index = d.file.indexOf(this.selectedSample);
     if (d.rank == this.selectedTaxon) {
@@ -314,7 +269,7 @@ export class ContaminantService {
       this.searchTree(d.children[i]);
     }
   }
-
+  // take the sample data and place it in training and currentPoints (to plot in scatterplot1)
   arrangePoints() {
     this.currentPoints = Array() as [{
       "control": number,
@@ -347,7 +302,7 @@ export class ContaminantService {
       }
     }
   }
-
+  // train the regression and then predict points, determining which points are above or below
   async trainAndPredict() {
 
     const xs = tf.data.array(this.train.ctrl_reads_log);
@@ -415,22 +370,7 @@ export class ContaminantService {
 
     return predictions;
   }
-
-  prepareAnalysis(sample: string, taxon: string): [{
-    "control": number,
-    "sample": number,
-    "node_pos": number,
-    "name": string,
-    "pathogenic": number
-  }] {
-    this.selectedSample = sample;
-    this.selectedTaxon = taxon;
-    let data = _.cloneDeep(this.jsonData);
-    this.findTaxons(data);
-    this.arrangePoints();
-    return this.currentPoints;
-  }
-
+  //  push into lists in dictionaries, in preperation for comparing data of all samples in clussterplot 1
   findTotals(d: Taxon, rootReads: number[][], selectedsample: string) {
     this.totalPoints = {
       "control":[],
@@ -440,6 +380,13 @@ export class ContaminantService {
       "pathogenic":[],
       "tax_id": []
     }
+    this.clusterCounts = Array() as[{
+      "cluster": number,
+      "taxa": number,
+      "avg_ctrl_percentage": number,
+      "avg_sample_percentage": number[],
+      "avg_sample_percent_string": string[]
+    }]
     this.plotTotalPoints = Array() as [{
       "control": number,
       "sample": number[],
@@ -454,12 +401,9 @@ export class ContaminantService {
     }];
     this.countTotals(d, rootReads, selectedsample);
   }
-
+  // get the data of all taxa which are to be displayed in clusterplot 1
   countTotals(d: Taxon, rootReads: number[][], selectedsample: string): void {
-    // console.log(d.taxon_reads.map(function(n,i){return (n/ rootReads[0][i]);}).push(d.ctrl_reads));
     let index = d.file.indexOf(selectedsample);
-    // console.log(index); && d.taxon_reads[index]>0
-    // d.taxon_reads.some(x=>x>0)
     if (d.rank == "species" && d.taxon_name != "Homo sapiens" && d.taxon_reads[index]>0) {
       this.totalPoints["control"].push(d.ctrl_taxon_reads);
       this.totalPoints["sample"].push(d.taxon_reads);
@@ -475,9 +419,8 @@ export class ContaminantService {
       this.countTotals(d.children[i], rootReads, selectedsample);
     }
   }
-
-
-    sampleFindTotals(d: Taxon, rootReads: number[][]) {
+  // get the data of all samples, to be displayed in clusterplot 2
+  sampleFindTotals(d: Taxon, rootReads: number[][]) {
       this.SamplePoints =  {
         "control": [],
         "ctrl_percentage": [],
@@ -524,40 +467,46 @@ export class ContaminantService {
       this.sampleCountTotals(d.children[i], rootReads);
     }
   }
-
-  tsneModel(): void {
-    // let model = new TSNE({
-    //   dim: 2,
-    //   perplexity: 10.0,
-    //   earlyExaggeration: 2,
-    //   learningRate: 10.0,
-    //   nIter: 5000,
-    //   metric: 'euclidian'
-    // });
-    // model.init({
-    //   data:this.totalPoints['percentage'],
-    //   type: 'dense'
-    // });
-    // let [errr, iter] = model.run();
-    // // rerun without re-calculating pairwise distances, etc.
-    // [errr, iter] = model.rerun();
-    // // `output` is unpacked ndarray (regular nested javascript array)
-    // let output: number[][];
-    // output = model.getOutput();
-    // // output = model.getOutputScaled();
-
+  // performing the umap, dbscan, kmeans
+  async clustering() {
     let umap = new UMAP({minDist: 0.4});
     let output = umap.fit(this.totalPoints['percentage']);
 
     let dbscan = new clustering.DBSCAN();
-    let dbclusters = dbscan.run(this.totalPoints['percentage'], 5, 1);
-    console.log(dbclusters);
-    console.log(this.totalPoints['name'][dbclusters[1][0]]);
-    console.log(this.totalPoints['name'][dbclusters[2][0]]);
+    let dbclusters = dbscan.run(this.totalPoints['percentage'], 1, 1);
 
-    console.log(this.totalPoints['percentage'].length);
+    // let ans = kmeans(this.totalPoints['percentage'], dbclusters.length, {seed: 1234567891234, initialization: 'kmeans++'});
 
-    let ans = kmeans(this.totalPoints['percentage'], 5, {seed: 1234567891234, initialization: 'kmeans++'});
+    return await [output, dbclusters];
+    // ans
+  }
+  //generate cluster plot 1 data
+  async tsneModel() {
+
+    await new Promise(resolve=> setTimeout(resolve, 10));
+
+    let [output, dbclusters] = await this.clustering();
+    // ans
+    let ans = Array(this.totalPoints['percentage'].length).fill(0);
+
+    for (let i = 0; i<dbclusters.length; i++){
+          for (let j = 0; j<dbclusters[i].length; j++){
+            ans[dbclusters[i][j]] = i;
+          }
+    }
+    console.log(ans)
+
+    await new Promise(resolve=> setTimeout(resolve, 100));
+
+    for (let i = 0; i < dbclusters.length; i++){
+      this.clusterCounts[i]={
+        "cluster":i,
+        "taxa": 0,
+        "avg_ctrl_percentage": 0,
+        "avg_sample_percentage": Array(this.totalPoints['sample'][0].length).fill(0),
+        "avg_sample_percent_string":  Array(this.totalPoints['sample'][0].length)
+      }
+    }
 
     for (let i = 0; i<output.length; i++){
       this.plotTotalPoints.push({
@@ -569,66 +518,60 @@ export class ContaminantService {
         "tsneX": output[i][0],
         "tsneY": output[i][1],
         "node_pos": 3,
-        "clusters": ans["clusters"][i],
+        "clusters": ans[i],
         "tax_id": this.totalPoints['tax_id'][i]
       });
+      let samplepercents = this.totalPoints['percentage'][i]
+      this.clusterCounts[ans[i]]['taxa']+=1;
+      this.clusterCounts[ans[i]]['avg_ctrl_percentage']+=samplepercents.pop();
+      this.clusterCounts[ans[i]]['avg_sample_percentage']=this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j)=> a+samplepercents[j]);
     }
-    // `outputScaled` is `output` scaled to a range of [-1, 1]
-    // let outputScaled = model.getOutputScaled();
-  }
 
+    for (let i = 0; i < dbclusters.length; i++){
+      this.clusterCounts[i]['avg_ctrl_percentage']=this.clusterCounts[i]['avg_ctrl_percentage']/this.clusterCounts[i]['taxa'];
+      for (let j = 0; j < this.clusterCounts[i]['avg_sample_percentage'].length; j++){
+        console.log(this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']);
+        if((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])>= 0.001 || (this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']) == 0){
+          this.clusterCounts[i]["avg_sample_percent_string"][j]= String(Math.round((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])*1000)/1000);
+        }else {
+          this.clusterCounts[i]["avg_sample_percent_string"][j]= String((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']).toExponential(2));
+        }
+        this.clusterCounts[i]['avg_sample_percentage'][j]=Number(Math.round((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])*1000)/1000);
+        }
+      }
+  }
+  //generate cluster plot 2 data
   tsneSampleModel(d: Taxon): void {
-    // console.log(this.SamplePoints)
-    // let model = new TSNE({
-    //   dim: 2,
-    //   perplexity: 2,
-    //   earlyExaggeration: 4,
-    //   learningRate: 10,
-    //   nIter: 5000,
-    //   metric: 'manhattan',
-    // });
+
     let tsnesampledata = this.SamplePoints['percentage'].concat([this.SamplePoints['ctrl_percentage']])
-    // Math.round(tsnesampledata.length/3)
+
     let umap = new UMAP({minDist: 0.7, nNeighbors: 2});
     let output = umap.fit(tsnesampledata);
-    // model.init({
-    //   data: tsnesampledata,
-    //   type: 'dense'
-    // });
-    //
-    // let [errr, iter] = model.run();
-    // // rerun without re-calculating pairwise distances, etc.
-    // [errr, iter] = model.rerun();
-    // // `output` is unpacked ndarray (regular nested javascript array)
-    // let output: number[][];
-    // output = model.getOutputScaled();
-    // output = model.getOutputScaled();
-    // console.log(tsnesampledata);
-    // let pca = new PCA(tsnesampledata);
-    // console.log(pca["U"].data);
-    // let boutput = pca["U"].data;
-    // console.log(pca.getExplainedVariance());
-    // debugger;
+
     let names = d.file.concat(['ctrl']);
 
-    let ans = kmeans(tsnesampledata, 5, {seed:123123456789, initialization: 'kmeans++'});
-    // console.log(ans["clusters"])
+    let dbscan = new clustering.DBSCAN();
+    let dbclusters = dbscan.run(tsnesampledata, 2, 1);
+    console.log(dbclusters);
+
+    let ans = Array(names.length).fill(0);;
+    for (let i = 0; i<dbclusters.length; i++){
+          for (let j = 0; j<dbclusters[i].length; j++){
+            ans[dbclusters[i][j]] = i;
+          }
+    }
+    // let ans = kmeans(tsnesampledata, dbclusters.length, {seed:123123456789, initialization: 'kmeans++'});
+    // ans['clusters']
 
     for (let i = 0; i<output.length; i++){
       this.plotSamplePoints.push({
-        // "control": this.totalPoints['control'][i],
-        // "sample": this.totalPoints['sample'][i],
-        // "percentage": this.totalPoints['percentage'][i],
         "name": names[i],
-        "cluster": ans["clusters"][i],
-        // "pathogenic": this.totalPoints['pathogenic'][i],
+        "cluster": ans[i],
         "tsneX": output[i][1],
         "tsneY": output[i][0],
-        // "tax_id": this.totalPoints['tax_id'][i]
       });
     }
-    // `outputScaled` is `output` scaled to a range of [-1, 1]
-    // let outputScaled = model.getOutputScaled();
+
   }
 
 }

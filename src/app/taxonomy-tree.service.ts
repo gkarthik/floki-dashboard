@@ -95,13 +95,13 @@ export class TaxonomyTreeService {
       }
     }
     for (let j = 0; j < d.file.length; j++) {
-      if (isNaN(d.reads[j])) {
+      if (isNaN(d.reads[j]) || d.reads[j]==0) {
         d.taxon_reads[j] = childreads[j] + 0
       } else {
-        d.taxon_reads[j] = d.reads[j] + childreads[j]
+        d.taxon_reads[j] = d.reads[j] + childreads[j];
       }
     }
-    if (isNaN(d.ctrl_taxon_reads)) {
+    if (isNaN(d.ctrl_reads) || d.ctrl_reads == 0) {
       d.ctrl_taxon_reads = 0 + child_ctrlreads;
     } else {
       d.ctrl_taxon_reads = d.ctrl_reads + child_ctrlreads;

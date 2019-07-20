@@ -38,7 +38,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   ngOnInit() {
     this.contaminantService.getTree().subscribe(_ => this.onInit(_));
   }
-
+  // on initialize: plot the sample clustering plot
   onInit(_: Taxon): void {
     this.scoreThreshold = 1;
     this.selectedTaxon = "species";
@@ -54,22 +54,21 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
   ngAfterViewInit() {
   }
-
+  // creates scatter and cluster plot for the selected sample
   realize() {
     this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
     this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, this.scoreThreshold);
-    this.tsneModel(this.selectedSample);
-    this.tsnePlot();
+    this.tsneModel(this.selectedSample).then(t => this.tsnePlot(true));
     this.contaminantService.prepareAnalysis(this.selectedSample, this.selectedTaxon); // Sets current points in service
     this.updateplot()
     this.contaminantService.trainAndPredict().then(
       pred => {
         this.updateplot(),
-        this.tsnePlot(),
+        this.tsnePlot(false),
         this.updateline(pred)
       });
   }
-
+  // initializes plots for later use
   initializePlot(){
     this.initializeScatterPlot();
     this.initializeTsnePlot();
@@ -161,7 +160,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   initializeTsnePlot() {
 
     let svg = d3.select(this.svg2.nativeElement)
-      .attr("width", this.canvas_width)
+      .attr("width", this.canvas_width+500)
       .attr("height", this.canvas_height);
 
     let xline = d3.scaleLog()
@@ -318,7 +317,8 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
   updateplot() {
     let current = this.contaminantService.getCurrentPoints();
-    console.log(current);
+    let pointCounts = current.length;
+
     let svg = d3.select(this.svgEl.nativeElement);
 
     svg.select("#contaminant_line").style('stroke', '#fff');
@@ -367,9 +367,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       })
       .attr("r", function(d) {
         if (d.pathogenic) {
-          return 5;
+          return 8/(Math.log(pointCounts)/Math.log(20));
         } else {
-          return 4;
+          return 7/(Math.log(pointCounts)/Math.log(20));
         }
       })
       .attr("cx", function(d) {
@@ -422,9 +422,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       })
       .attr("r", function(d) {
         if (d.pathogenic) {
-          return 5;
+          return 8/(Math.log(pointCounts)/Math.log(20));
         } else {
-          return 4;
+          return 7/(Math.log(pointCounts)/Math.log(20));
         }
       })
       .attr("cx", function(d) {
@@ -517,13 +517,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
 
-    // var yScale = d3.scaleLinear()
-    //   .domain([0, d3.max(current, function(d) {
-    //     return d.sample;
-    //   })])
-    //   .range([canvas_height - padding, padding])
-    //   .nice();
-
     var line = d3.line()
       .x(function(d) { return xScale(d[0]); })
       .y(function(d) { return yScale(d[1]); })
@@ -555,55 +548,56 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   }
 
   tsneModel(selectedsample: string){
-    console.log(selectedsample);
     let rootReads = this.taxonomyTreeService.getRootReads();
     this.contaminantService.findTotals(this.jsonData, rootReads, selectedsample);
     let model = this.contaminantService.tsneModel();
     return model;
   }
 
-  tsnePlot(){
-    let plotpoints = this.contaminantService.getPlotTotalPoints();
+  tsnePlot(clusterFlag: boolean){
+    let plotPoints = this.contaminantService.getPlotTotalPoints();
+    let clusterStats = this.contaminantService.getClusterCounts();
+    let pointcount = plotPoints.length
+
     let svg = d3.select(this.svg2.nativeElement)
-      .attr("width", this.canvas_width)
+      .attr("width", this.canvas_width+500)
       .attr("height", this.canvas_height);
 
     var tooltip = d3.select(this.tooltipEl.nativeElement);
 
     var clusterscale = d3.scaleLinear()
-      .domain([d3.min(plotpoints, function(d) {
+      .domain([d3.min(plotPoints, function(d) {
         return d.clusters;
-      }), d3.max(plotpoints, function(d) {
-        return d.clusters;
+      }), d3.max(plotPoints, function(d) {
+        return 1+d.clusters;
       })])
       .range([0, 1]);
 
-    var colorScale = d3.scaleSequential((d)=>d3.interpolateRdYlBu(clusterscale(d)));
+    // var colorScale = d3.scaleSequential((d)=>d3.interpolateSinebow(clusterscale(d)));
+    var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0','1','2','3','4','5','6','7','8','9']);
 
     var xScale = d3.scaleLinear()
-      .domain([d3.min(plotpoints, function(d) {
+      .domain([d3.min(plotPoints, function(d) {
         return d.tsneX;
-      }), d3.max(plotpoints, function(d) {
+      }), d3.max(plotPoints, function(d) {
         return d.tsneX;
       })])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
     var yScale = d3.scaleLinear()
-      .domain([d3.min(plotpoints, function(d) {
+      .domain([d3.min(plotPoints, function(d) {
         return d.tsneY;
-      }), d3.max(plotpoints, function(d) {
+      }), d3.max(plotPoints, function(d) {
         return d.tsneY;
       })])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
 
-    var logScale = d3.scaleLog().domain([0.0000001, 5])
-
-    // var colorScale = d3.scaleSequential((d)=>d3.interpolateRdYlBu(logScale(d)));
+    var logScale = d3.scaleLog().domain([0.0000001, 5]);
 
     var circle = svg.selectAll(".taxon")
-      .data(plotpoints);
+      .data(plotPoints);
 
     let circleEnter = circle.enter()
       .append("circle")
@@ -615,27 +609,23 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         return yScale(d.tsneY);
       })
       .style("r", function(d) {
-          if (d.node_pos == 3) {
-            return 4;
-          } else if (d.node_pos == 2) {
-            if(d.pathogenic){
-              return 5;
-            }else{
-              return 4;
-            }
-          } else if (d.node_pos == 1) {
-            return 3;
-          } else {
-            return 2;
+          if(d.pathogenic){
+            return 8/(Math.log(pointcount)/Math.log(20));
+          }else{
+            return 7/(Math.log(pointcount)/Math.log(20));
           }
         })
-      // .attr("r", function(d) {
-      //   if (d.pathogenic) {
-      //     return 5;
-      //   } else {
-      //     return 4;
-      //   }
-      // })
+      .style("opacity", function(d) {
+          if (d.node_pos == 3) {
+            return 1;
+          } else if (d.node_pos == 2) {
+            return 1;
+          } else if (d.node_pos == 1) {
+            return 0.2;
+          } else {
+            return 0.2;
+          }
+        })
       .attr("cx", function(d) {
         return xScale(d.tsneX);
       })
@@ -663,17 +653,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .style("fill", function(d) {
         return colorScale(d.clusters);
       });
-      // .style("fill", function(d) {
-      //     if (d['node_pos'] == 3) {
-      //       return "#d3d3d3";
-      //     } else if (d['node_pos'] == 2) {
-      //       return "#5ac1e0";
-      //     } else if (d['node_pos'] == 1) {
-      //       return "#adadad";
-      //     } else {
-      //       return "#f4aa4e";
-      //     }
-      //   });
+
     circleEnter.merge(circle)
       .attr("x", function(d) {
         return xScale(d.tsneX);
@@ -682,27 +662,23 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         return yScale(d.tsneY);
       })
       .style("r", function(d) {
-          if (d.node_pos == 3) {
-            return 4;
-          } else if (d.node_pos == 2) {
-            if(d.pathogenic){
-              return 5;
-            }else{
-              return 4;
-            }
-          } else if (d.node_pos == 1) {
-            return 3;
-          } else {
-            return 2;
+          if(d.pathogenic){
+            return 8/(Math.log(pointcount)/Math.log(20));
+          }else{
+            return 7/(Math.log(pointcount)/Math.log(20));
           }
         })
-      // .attr("r", function(d) {
-      //   if (d["pathogenic"]) {
-      //     return 5;
-      //   } else {
-      //     return 4;
-      //   }
-      // })
+      .style("opacity", function(d) {
+          if (d.node_pos == 3) {
+            return 1;
+          } else if (d.node_pos == 2) {
+            return 1;
+          } else if (d.node_pos == 1) {
+            return 0.2;
+          } else {
+            return 0.2;
+          }
+        })
       .attr("cx", function(d) {
         return xScale(d.tsneX);
       })
@@ -720,25 +696,83 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .style("fill", function(d) {
         return colorScale(d.clusters);
       });
-      // .style("fill", function(d) {
-      //     if (d['node_pos'] == 3) {
-      //       return "#d3d3d3";
-      //     } else if (d['node_pos'] == 2) {
-      //       return "#5ac1e0";
-      //     } else if (d['node_pos'] == 1) {
-      //       return "#adadad";
-      //     } else {
-      //       return "#f4aa4e";
-      //     }
-      //   });
 
     circle.exit()
       .remove();
+
+    if(clusterFlag){
+      d3.selectAll(".clusterStats").remove();
+      // d3.select("#idOfElement").remove();
+
+      for (let i = 0; i<clusterStats.length; i++){
+        svg.append("text")
+          .attr("text-anchor", "start")
+          .attr("class", "clusterStats")
+          .attr("transform", "translate(" + (this.canvas_width-70+70 *i) + "," + (80) + ")")
+          .style("font-size", "15px")
+          .style('fill', colorScale(i))
+          .style('stroke', '#000000')
+          .attr("stroke-width", 0.5)
+          .text("Cluster " + (1+clusterStats[i].cluster));
+
+        svg.append("text")
+          .attr("text-anchor", "start")
+          .attr("class", "clusterStats")
+          .attr("transform", "translate(" + (this.canvas_width-70 + 70 * i) + "," + (95) + ")")
+          .style("font-size", "15px")
+          .style('fill', colorScale(i))
+          .style('stroke', '#000000')
+          .attr("stroke-width", 0.5)
+          .text("taxa: " +  clusterStats[i].taxa);
+
+        svg.append("text")
+          .attr("text-anchor", "start")
+          .attr("class", "clusterStats")
+          .attr("transform", "translate(" + (this.canvas_width-70 + 70 * i) + "," + (110) + ")")
+          .style("font-size", "12px")
+          .style('fill', colorScale(i))
+          .style('stroke', '#000000')
+          .attr("stroke-width", 0.5)
+          .text("avg ctrl %:");
+
+        svg.append("text")
+          .attr("text-anchor", "start")
+          .attr("class", "clusterStats")
+          .attr("transform", "translate(" + (this.canvas_width-70 + 70 * i) + "," + (125) + ")")
+          .style("font-size", "12px")
+          .style('fill', colorScale(i))
+          .style('stroke', '#000000')
+          .attr("stroke-width", 0.5)
+          .text((clusterStats[i].avg_ctrl_percentage).toExponential(2));
+
+        svg.append("text")
+          .attr("text-anchor", "start")
+          .attr("class", "clusterStats")
+          .attr("transform", "translate(" + (this.canvas_width-70 + 70*i) + "," + (140) + ")")
+          .style("font-size", "12px")
+          .style('fill', colorScale(i))
+          .style('stroke', '#000000')
+          .attr("stroke-width", 0.5)
+          .text("avg %:");
+
+        for (let j = 0; j<clusterStats[i].avg_sample_percentage.length; j++){
+          svg.append("text")
+            .attr("text-anchor", "start")
+            .attr("class", "clusterStats")
+            .attr("transform", "translate(" + (this.canvas_width-70  + 70*i) + "," + (155 +  15*j) + ")")
+            .style("font-size", "12px")
+            .style('fill', colorScale(i))
+            .style('stroke', '#000000')
+            .attr("stroke-width", 0.5)
+            .text(""+clusterStats[i].avg_sample_percent_string[j] +"");
+        }
+      }
+    }
   }
 
-// plotting comparison of samples in a TSNE
   tsneSamplePlot(){
-    let plotpoints = this.contaminantService.getPlotSamplePoints();
+    let plotPoints = this.contaminantService.getPlotSamplePoints();
+    let pointCounts = plotPoints.length;
 
     let svg = d3.select(this.svg3.nativeElement)
       .attr("width", this.canvas_width)
@@ -747,9 +781,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     var tooltip = d3.select(this.tooltipEl.nativeElement);
 
     var clusterscale = d3.scaleLinear()
-      .domain([d3.min(plotpoints, function(d) {
+      .domain([d3.min(plotPoints, function(d) {
         return d.cluster;
-      }), d3.max(plotpoints, function(d) {
+      }), d3.max(plotPoints, function(d) {
         return d.cluster;
       })])
       .range([0, 1]);
@@ -757,25 +791,25 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     var colorScale = d3.scaleSequential((d)=>d3.interpolateRdYlBu(clusterscale(d)));
 
     var xScale = d3.scaleLinear()
-      .domain([d3.min(plotpoints, function(d) {
+      .domain([d3.min(plotPoints, function(d) {
         return d.tsneX-0.1;
-      }), d3.max(plotpoints, function(d) {
+      }), d3.max(plotPoints, function(d) {
         return d.tsneX+0.1;
       })])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
     var yScale = d3.scaleLinear()
-      .domain([d3.min(plotpoints, function(d) {
+      .domain([d3.min(plotPoints, function(d) {
         return d.tsneY-0.1;
-      }), d3.max(plotpoints, function(d) {
+      }), d3.max(plotPoints, function(d) {
         return d.tsneY+0.1;
       })])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
 
     svg.selectAll(".dotlabel")
-      .data(plotpoints)
+      .data(plotPoints)
       .enter()
       .append("text")
       .attr("class", "dotlabel")
@@ -790,7 +824,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .text((d)=>d.name.replace(/MG-00/g, "").replace(/.report/g, ""));
 
     var circle = svg.selectAll(".taxon")
-      .data(plotpoints);
+      .data(plotPoints);
 
     let circleEnter = circle.enter()
       .append("circle")
@@ -801,7 +835,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("y", function(d) {
         return yScale(d.tsneY);
       })
-      .attr("r", 4)
+      .attr("r", 5/Math.log10(pointCounts))
       .attr("cx", function(d) {
         return xScale(d.tsneX);
       })
@@ -828,7 +862,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("y", function(d) {
         return yScale(d.tsneY);
       })
-      .attr("r", 4)
+      .attr("r", 5/Math.log10(pointCounts))
       .attr("cx", function(d) {
         return xScale(d.tsneX);
       })
@@ -843,23 +877,11 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         }
       })
       .style("stroke", function(d) {
-        // if (d.pathogenic) {
-        //   return '#E04836';
-        // } else {
           return '#000000';
-        // }
       })
       .style("fill", function(d) {
         return colorScale(d.cluster);
-          // if (d['node_pos'] == 3) {
-          //   return "#d3d3d3";
-          // } else if (d['node_pos'] == 2) {
-          //   return "#5ac1e0";
-          // } else if (d['node_pos'] == 1) {
-          //   return "#adadad";
-          // } else {
-          //   return "#f4aa4e";
-          // }
+
         });
 
     circle.exit()
