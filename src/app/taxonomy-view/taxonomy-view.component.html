@@ -23,7 +23,6 @@
 	  <label for="sigLevel">Significance Level</label>
 	  <input type="text" class="form-control" id="sigLevel" placeholder="Significance Level" [(ngModel)]="sigLevel" name="sigLevel">
 	</div>
-
   <!-- <div class="form-group col-md-4">
     <label for="minReads">Minimum Kmer Score</label>
     <select [(ngModel)]="kmerThreshold" (ngModelChange)="drawCanvas(taxonomyTree.tax_id)">
@@ -31,16 +30,23 @@
     </select>
   </div> -->
       </div>
-      <select [(ngModel)]="scoreThreshold" name= "scoreselect" (ngModelChange)="drawCanvas(taxonomyTree.tax_id)">
-        <option *ngFor="let c of [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]" [ngValue]="c">{{c}}</option>
-      </select>
       <div class="form-row">
-	<div class="col-md-6">
+	<div class="col-md-1.5">
+    <label for="minOR"> </label>
 	  <button class="btn btn-primary mb-2" (click)="drawCanvas(taxonomyTree.tax_id)">Filter</button>
 	</div>
-	<div class="col-md-6">
+	<div class="col-md-4">
+    <label for="minOR"> </label>
 	  <button class="btn btn-primary mb-2" (click)="showPathogenic()">Show Pathogenic</button>
 	</div>
+  <div class="form-group col-md-3.5">
+    <label for="minOR">Minimum read score: </label>
+  </div>
+  <div class="form-group col-md-2">
+  <select [(ngModel)]="scoreThreshold" name= "scoreselect" class="form-control" (ngModelChange)="drawCanvas(taxonomyTree.tax_id)">
+    <option *ngFor="let c of [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]" [ngValue]="c">{{c}}</option>
+  </select>
+  </div>
       </div>
       <div class="form-row">
 	<div class="col-md-4">
@@ -55,6 +61,7 @@
       </div>
     </form>
     <h3><span class="badge badge-light">{{currentNode.taxon_name}}</span></h3>
+    <app-pass-threshold-table [screenHeight]="screenHeight" [screenWidth]="screenWidth" [nodeData]="currentNode"></app-pass-threshold-table>
     <app-node-pathogenic-table [screenHeight]="screenHeight" [screenWidth]="screenWidth" [nodeData]="currentNode"></app-node-pathogenic-table>
     <app-node-bar-chart [screenHeight]="screenHeight" [screenWidth]="screenWidth" [nodeData]="currentNode" key="percentage"></app-node-bar-chart>
     <app-node-bar-chart [screenHeight]="screenHeight" [screenWidth]="screenWidth" [nodeData]="currentNode" key="taxon_reads"></app-node-bar-chart>

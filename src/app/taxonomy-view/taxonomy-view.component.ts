@@ -103,13 +103,17 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   }
 
   showSearch(): void {
-    this.taxonomyTree = this.taxonomyTreeService.setBiggerPort();
-    this.taxonomyTree = this.taxonomyTreeService.cutScores(this.taxonomyTree, this.scoreThreshold);
-    this.taxonomyTree = this.taxonomyTreeService.filterSearch(this.taxonomyTree, this.pathogenic, this.searchterm, this.minReads, this.sigLevel, this.minOddsRatio);
-    this.pathToRoot = [this.taxonomyTree];
-    this.currentNode = this.taxonomyTree;
-    this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth * (2 / 3), this.canvasOffset.x, this.canvasOffset.y, this.screenWidth * (1 / 12));
-    this.update();
+    if(this.searchterm) {
+      if(this.searchterm.length > 1){
+        this.taxonomyTree = this.taxonomyTreeService.setBiggerPort();
+        this.taxonomyTree = this.taxonomyTreeService.cutScores(this.taxonomyTree, this.scoreThreshold);
+        this.taxonomyTree = this.taxonomyTreeService.filterSearch(this.taxonomyTree, this.pathogenic, this.searchterm, this.minReads, this.sigLevel, this.minOddsRatio);
+        this.pathToRoot = [this.taxonomyTree];
+        this.currentNode = this.taxonomyTree;
+        this.treeDescendants = this.taxonomyTreeService.getLayout(this.taxonomyTree, this.screenHeight, this.screenWidth * (2 / 3), this.canvasOffset.x, this.canvasOffset.y, this.screenWidth * (1 / 12));
+        this.update();
+      }
+    }
   }
 
   showPathogenic(tax_id: number): void {

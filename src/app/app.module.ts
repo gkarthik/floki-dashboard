@@ -8,6 +8,7 @@ import { AppComponent } from './app.component';
 import { TaxonomyViewComponent } from './taxonomy-view/taxonomy-view.component';
 import { NodeBarChartComponent } from './node-bar-chart/node-bar-chart.component';
 import { NodePathogenicTableComponent } from './node-pathogenic-table/node-pathogenic-table.component';
+import { PassThresholdTableComponent } from './pass-threshold-table/pass-threshold-table.component';
 import { AnnotationComponent } from './annotation/annotation.component';
 import { ScoreDistributionChartComponent } from './score-distribution-chart/score-distribution-chart.component';
 import { ContaminantComponent } from './contaminant/contaminant.component';
@@ -18,6 +19,7 @@ import { ContaminantComponent } from './contaminant/contaminant.component';
     TaxonomyViewComponent,
     NodeBarChartComponent,
     NodePathogenicTableComponent,
+    PassThresholdTableComponent,
     AnnotationComponent,
     ScoreDistributionChartComponent,
     ContaminantComponent
