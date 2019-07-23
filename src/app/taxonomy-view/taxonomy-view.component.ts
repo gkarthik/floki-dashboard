@@ -147,7 +147,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     let hoverEvent: boolean = false;
     d3.selectAll("custom-node")
       .each(function(d: HierarchyPointNode<Taxon>) {
-        if (_this.checkWithinRadius([d.y, d.x], [_y, _x], _this.nodeSize + _this.strokeWidth)) {
+        if (_this.checkWithinRadius([d.y, d.x], [_y+5, _x], _this.nodeSize + _this.strokeWidth)) {
           if (d3.select(this).attr("_fill") == null)
             d3.select(this).attr("_fill", String(d3.select(this).attr("fill")));
           d3.select(this).attr("fill", _this.colorScheme["hover_fill"]);

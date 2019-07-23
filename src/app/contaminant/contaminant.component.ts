@@ -29,6 +29,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   private selectedSample: string;
   private selectedTaxon: string;
   private scoreThreshold: number;
+  private selectClusters: number;
 
   private padding: number = 50;
   private canvas_width: number = 800;
@@ -42,6 +43,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   onInit(_: Taxon): void {
     this.scoreThreshold = 1;
     this.selectedTaxon = "species";
+    this.selectClusters = 3;
     this.jsonData = _;
     this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
     this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, 1);
@@ -550,7 +552,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   tsneModel(selectedsample: string){
     let rootReads = this.taxonomyTreeService.getRootReads();
     this.contaminantService.findTotals(this.jsonData, rootReads, selectedsample);
-    let model = this.contaminantService.tsneModel();
+    let model = this.contaminantService.tsneModel(this.selectClusters);
     return model;
   }
 
@@ -649,7 +651,13 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
           return 0.6;
         }
       })
-      .style("stroke", '#000000')
+      .style("stroke", function(d) {
+        if (d.pathogenic) {
+          return '#E04836';
+        } else {
+          return '#000000';
+        }
+      })
       .style("fill", function(d) {
         return colorScale(d.clusters);
       });
@@ -692,7 +700,13 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
           return 0.6;
         }
       })
-      .style("stroke", '#000000')
+      .style("stroke", function(d) {
+        if (d.pathogenic) {
+          return '#E04836';
+        } else {
+          return '#000000';
+        }
+      })
       .style("fill", function(d) {
         return colorScale(d.clusters);
       });

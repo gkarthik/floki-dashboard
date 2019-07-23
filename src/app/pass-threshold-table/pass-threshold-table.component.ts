@@ -59,7 +59,7 @@ export class PassThresholdTableComponent implements OnChanges, AfterViewInit, On
     //get the samples for which this taxa pass filters:
     for (var i = 0; i < _data.over_threshold.length; i++) {
       if(_data.over_threshold[i]==1){
-        this.passFilterArray[0].push(_data.file[i].replace(/.report/g, '\u00A0'))
+        this.passFilterArray[0].push(_data.file[i].replace(/.report/g, ',\u00A0'))
         // this.label.push('\u00A0');
       }
     }
@@ -107,7 +107,7 @@ export class PassThresholdTableComponent implements OnChanges, AfterViewInit, On
             .data(this.passFilterArray)
             .enter()
             .append("tr");
-    // We built the rows using the nested array - now each row has its own array.
+
     let cells = rows.selectAll("td")
             .data(function(d) {
                 return d;

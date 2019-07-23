@@ -468,7 +468,7 @@ export class ContaminantService {
     }
   }
   // performing the umap, dbscan, kmeans
-  async clustering() {
+  async dbClustering() {
     let umap = new UMAP({minDist: 0.4});
     let output = umap.fit(this.totalPoints['percentage']);
 
@@ -480,25 +480,40 @@ export class ContaminantService {
     return await [output, dbclusters];
     // ans
   }
+
+  async kmeanClustering(selectClusters) {
+    let umap = new UMAP({minDist: 0.4});
+    let output = umap.fit(this.totalPoints['percentage']);
+
+    // let dbscan = new clustering.DBSCAN();
+    // let dbclusters = dbscan.run(this.totalPoints['percentage'], 1, 1);
+    console.log(selectClusters);
+    let ans = kmeans(this.totalPoints['percentage'], selectClusters, {seed: 1234567891234, initialization: 'kmeans++'});
+
+    return await [output, ans['clusters']];
+    // ans
+  }
   //generate cluster plot 1 data
-  async tsneModel() {
+  async tsneModel(selectClusters) {
 
     await new Promise(resolve=> setTimeout(resolve, 10));
 
-    let [output, dbclusters] = await this.clustering();
-    // ans
-    let ans = Array(this.totalPoints['percentage'].length).fill(0);
+    if(false){
+      let [output, dbclusters] = await this.dbClustering();
+      let ans = Array(this.totalPoints['percentage'].length).fill(0);
 
-    for (let i = 0; i<dbclusters.length; i++){
-          for (let j = 0; j<dbclusters[i].length; j++){
-            ans[dbclusters[i][j]] = i;
-          }
+      for (let i = 0; i<dbclusters.length; i++){
+        for (let j = 0; j<dbclusters[i].length; j++){
+          ans[dbclusters[i][j]] = i;
+        }
+      }
     }
-    console.log(ans)
+
+    let [output, ans] = await this.kmeanClustering(selectClusters);
 
     await new Promise(resolve=> setTimeout(resolve, 100));
 
-    for (let i = 0; i < dbclusters.length; i++){
+    for (let i = 0; i < selectClusters; i++){
       this.clusterCounts[i]={
         "cluster":i,
         "taxa": 0,
@@ -527,7 +542,7 @@ export class ContaminantService {
       this.clusterCounts[ans[i]]['avg_sample_percentage']=this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j)=> a+samplepercents[j]);
     }
 
-    for (let i = 0; i < dbclusters.length; i++){
+    for (let i = 0; i < selectClusters; i++){
       this.clusterCounts[i]['avg_ctrl_percentage']=this.clusterCounts[i]['avg_ctrl_percentage']/this.clusterCounts[i]['taxa'];
       for (let j = 0; j < this.clusterCounts[i]['avg_sample_percentage'].length; j++){
         console.log(this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']);
