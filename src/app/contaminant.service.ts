@@ -355,7 +355,7 @@ export class ContaminantService {
     let confBand: number[][] = [];
     for (var i = 0; i < nVal; i++) {
       let interval: number = 0;
-      interval = Math.sqrt(mseVal * ((1 / nVal) + ((tX[i] - mX) ** 2) / (ssxVal))) * jStat.studentt.pdf(0.025, nVal - 2);
+      interval = Math.sqrt(mseVal * ((1 / nVal) + ((tX[i] - mX) ** 2) / (ssxVal))) * jStat.studentt.inv(0.025, nVal - 2);
       confBand.push([predY[i], predY[i] - interval, predY[i] + interval])
     }
     console.log(confBand);	// Confidence band to plot
