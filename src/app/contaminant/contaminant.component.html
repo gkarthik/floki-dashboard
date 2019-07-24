@@ -1,27 +1,27 @@
 <div class="row">
     <div class="form-row col-md">
-      <div class="form-group">
+      <div class="form-group col-md-2">
         <label for="minOR">Sample:</label>
         <select [(ngModel)]="selectedSample" class="form-control" (ngModelChange)="realize()">
           <option *ngFor="let c of jsonData.file" [ngValue]="c">{{c}}</option>
         </select>
       </div>
-      <div class="form-group col-md">
+      <div class="form-group col-md-2">
         <label for="minOR">Taxon</label>
         <select [(ngModel)]="selectedTaxon" class="form-control" (ngModelChange)="realize()">
           <option value = "species">species</option>
           <option value = "genus">genus</option>
         </select>
       </div>
-      <div class="form-group col-md">
+      <div class="form-group col-md-2">
         <label for="minOR">Read score:</label>
         <select [(ngModel)]="scoreThreshold" class="form-control" (ngModelChange)="realize()">
           <option *ngFor="let c of [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]" [ngValue]="c">{{c}}</option>
         </select>
       </div>
-      <div class="form-group col-md">
+      <div class="form-group col-md-2">
         <label for="minOR">Kmeans clusters:</label>
-        <select [(ngModel)]="selectClusters" class="form-control" (ngModelChange)="realize()">
+        <select [(ngModel)]="selectClusters" class="form-control" (ngModelChange)="updateCluster()">
           <option *ngFor="let c of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]" [ngValue]="c">{{c}}</option>
         </select>
       </div>

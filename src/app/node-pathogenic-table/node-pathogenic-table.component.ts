@@ -2,8 +2,6 @@ import { Component, OnInit, AfterViewInit, OnChanges, SimpleChange, SimpleChange
 
 import { Taxon } from '../taxon';
 
-import { ScaleLinear, ScaleBand } from 'd3-scale';
-
 import * as d3 from 'd3';
 import * as _ from "lodash";
 
@@ -64,7 +62,7 @@ export class NodePathogenicTableComponent implements OnChanges, AfterViewInit, O
         for (var j = 0; j < _data.diseases[i]['symptoms'].length; j++){
            symptoms.push(_data.diseases[i]['symptoms'][j]['label'])
         }
-        this.diseaseArray[i]=[_data.diseases[i]['label'],'\xA0'+symptoms]
+        this.diseaseArray[i]=[_data.diseases[i]['label'],'\xA0'+symptoms,_data.diseases[i]['id']]
       }
     }else{
       this.label = ["Not marked pathogenic"];
@@ -103,16 +101,15 @@ export class NodePathogenicTableComponent implements OnChanges, AfterViewInit, O
             .data(this.diseaseArray)
             .enter()
             .append("tr");
-    // We built the rows using the nested array - now each row has its own array.
-    let cells = rows.selectAll("td")
-            .data(function(d) {
-                return d;
-            })
-            .enter()
-            .append("td")
-            .text(function(d) {
-                return d;
-            });
+    rows.each(function(d) {
+      var self = d3.select(this);
+      self.append("td")
+        .append("a")
+        .attr("href", d[2])
+        .text(d[0]);
+      self.append("td")
+        .text(d[1]);
+    });
   }
 
   setUpCanvas(): void {

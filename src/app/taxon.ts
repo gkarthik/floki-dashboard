@@ -25,7 +25,7 @@ export class Taxon {
   file: string[];
   pathogenic: number;
   over_threshold: number[];
-  diseases: [];
+  diseases: [{id: string, label: string, symptoms:[{id: string, label: string}]}];
   children: Taxon[];
   num_nodes: number;
   average_forward_read_length: number[];
