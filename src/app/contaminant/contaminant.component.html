@@ -31,6 +31,34 @@
 <body>
   <p id="loadingText"> Initializing plots . . .</p>
   <svg #chartWrapper id="chart-wrapper"></svg>
+  <table class="contaminantTable" [class.transpose]="transpose" [style.width.rem]="fundClassDetailsViewModelData.length * 11 " id="toggled-element">
+  <tr>
+    <td class="tableItem bold">Accounting Class Name</td>
+    <td class="tableItem bold">Class ID</td>
+    <td class="tableItem bold">Legal Fund Class</td>
+    <td class="tableItem bold">Inception Date</td>
+    <td class="tableItem bold">Invested Amount</td>
+    <td class="tableItem bold">Vehicle Type</td>
+    <td class="tableItem bold">Closure Status</td>
+    <td class="tableItem bold">Is Side Pocket?</td>
+    <td class="tableItem bold">Is Thematic?</td>
+    <td class="tableItem bold">Cogency Class?</td>
+  </tr>
+
+  <tr *ngFor="let f of fundClassDetailsViewModelData ">
+  <td class="tableItem">{{ f.Description || "-"}}</td>
+  <td class="tableItem">{{f.Id || "-"}}</td>
+  <td class="tableItem">{{ f.LegalFundClassId || "-"}}</td>
+  <td class="tableItem">{{f.InceptionDate || "-"}}</td>
+  <td class="tableItem">{{ f.InvestedAmount || "-"}}</td>
+  <td class="tableItem">{{f.ClosureStatusId || "-"}}</td>
+  <td class="tableItem">{{ f.Description || "-"}}</td>
+  <td class="tableItem">{{f.IsSidePocket || "-"}}</td>
+  <td class="tableItem">{{ f.IsThematic || "-"}}</td>
+  <td class="tableItem">{{f.CogencyClassId || "-"}}</td>
+  </tr>
+
+  </table>
   <div #tooltip id="tooltip"></div>
   <svg #tsneWrapper id="tsne-wrapper"></svg>
   <svg #SampletsneWrapper id="sample-tsne-wrapper"></svg>
