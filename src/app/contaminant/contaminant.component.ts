@@ -70,6 +70,11 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         this.updateline(pred)
       });
   }
+
+  updateCluster() {
+    this.contaminantService.updateClustering(this.selectClusters)
+    this.tsnePlot(true);
+  }
   // initializes plots for later use
   initializePlot(){
     this.initializeScatterPlot();
@@ -321,6 +326,13 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     let current = this.contaminantService.getCurrentPoints();
     let pointCounts = current.length;
 
+    let a = []
+    let b = []
+    for (let i = 0; i<current.length; i++){
+      a.push(current[i].control);
+      b.push(current[i].sample);
+    }
+
     let svg = d3.select(this.svgEl.nativeElement);
 
     svg.select("#contaminant_line").style('stroke', '#fff');
@@ -497,7 +509,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   }
 
   updateline(pred: number[][]) {
-    console.log(pred);
     let current = this.contaminantService.getCurrentPoints();
     let pointCounts = this.contaminantService.getPointCounts();
     let padding = 50;

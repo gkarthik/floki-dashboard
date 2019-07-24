@@ -498,16 +498,16 @@ export class ContaminantService {
 
     await new Promise(resolve=> setTimeout(resolve, 10));
 
-    if(false){
-      let [output, dbclusters] = await this.dbClustering();
-      let ans = Array(this.totalPoints['percentage'].length).fill(0);
-
-      for (let i = 0; i<dbclusters.length; i++){
-        for (let j = 0; j<dbclusters[i].length; j++){
-          ans[dbclusters[i][j]] = i;
-        }
-      }
-    }
+    // if(false){
+    //   let [output, dbclusters] = await this.dbClustering();
+    //   let ans = Array(this.totalPoints['percentage'].length).fill(0);
+    //
+    //   for (let i = 0; i<dbclusters.length; i++){
+    //     for (let j = 0; j<dbclusters[i].length; j++){
+    //       ans[dbclusters[i][j]] = i;
+    //     }
+    //   }
+    // }
 
     let [output, ans] = await this.kmeanClustering(selectClusters);
 
@@ -538,7 +538,7 @@ export class ContaminantService {
       });
       let samplepercents = this.totalPoints['percentage'][i]
       this.clusterCounts[ans[i]]['taxa']+=1;
-      this.clusterCounts[ans[i]]['avg_ctrl_percentage']+=samplepercents.pop();
+      this.clusterCounts[ans[i]]['avg_ctrl_percentage']+=this.totalPoints['percentage'][i][this.totalPoints['percentage'][i].length-1]
       this.clusterCounts[ans[i]]['avg_sample_percentage']=this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j)=> a+samplepercents[j]);
     }
 
@@ -555,6 +555,55 @@ export class ContaminantService {
         }
       }
   }
+
+  async updateClustering(selectClusters) {
+    this.clusterCounts = Array() as[{
+      "cluster": number,
+      "taxa": number,
+      "avg_ctrl_percentage": number,
+      "avg_sample_percentage": number[],
+      "avg_sample_percent_string": string[]
+    }]
+
+    let ans = kmeans(this.totalPoints['percentage'], selectClusters, {seed: 1234567891234, initialization: 'kmeans++'});
+    ans = ans['clusters']
+
+
+    for (let i = 0; i < selectClusters; i++){
+      this.clusterCounts[i]={
+        "cluster":i,
+        "taxa": 0,
+        "avg_ctrl_percentage": 0,
+        "avg_sample_percentage": Array(this.totalPoints['sample'][0].length).fill(0),
+        "avg_sample_percent_string":  Array(this.totalPoints['sample'][0].length)
+      }
+    }
+
+    for (let i = 0; i<this.plotTotalPoints.length; i++){
+      this.plotTotalPoints[i]["clusters"]=ans[i]
+      // let samplepercents = this.totalPoints['percentage'][i]
+      console.log(this.totalPoints['percentage'][i])
+      this.clusterCounts[ans[i]]['taxa']+=1;
+      this.clusterCounts[ans[i]]['avg_ctrl_percentage']+=this.totalPoints['percentage'][i][12];
+      this.clusterCounts[ans[i]]['avg_sample_percentage']=this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j)=> a+this.totalPoints['percentage'][i][j]);
+    }
+
+    for (let i = 0; i < selectClusters; i++){
+      this.clusterCounts[i]['avg_ctrl_percentage']=this.clusterCounts[i]['avg_ctrl_percentage']/this.clusterCounts[i]['taxa'];
+      for (let j = 0; j < this.clusterCounts[i]['avg_sample_percentage'].length; j++){
+        console.log(this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']);
+        if((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])>= 0.001 || (this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']) == 0){
+          this.clusterCounts[i]["avg_sample_percent_string"][j]= String(Math.round((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])*1000)/1000);
+        }else {
+          this.clusterCounts[i]["avg_sample_percent_string"][j]= String((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']).toExponential(2));
+        }
+        this.clusterCounts[i]['avg_sample_percentage'][j]=Number(Math.round((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])*1000)/1000);
+        }
+      }
+
+    console.log(this.clusterCounts);
+  }
+
   //generate cluster plot 2 data
   tsneSampleModel(d: Taxon): void {
 
