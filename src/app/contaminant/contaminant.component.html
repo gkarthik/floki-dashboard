@@ -28,58 +28,23 @@
     </div>
 </div>
 
-<body>
-  <p id="loadingText"> Initializing plots . . .</p>
-  <svg #chartWrapper id="chart-wrapper"></svg>
-  <table class="contaminantTable" [class.transpose]="transpose" [style.width.rem]="fundClassDetailsViewModelData.length * 11 " id="toggled-element">
+<p id="loadingText"> Initializing plots . . .</p>
+<svg #chartWrapper id="chart-wrapper" class="svg-chart"></svg>
+<div #tooltip id="tooltip" class="svg-chart"></div>
+<svg #tsneWrapper id="tsne-wrapper" class="svg-chart"></svg>
+<table class="chart-table table" *ngIf="jsonData['file']!=undefined">
   <tr>
-    <td class="tableItem bold">Accounting Class Name</td>
-    <td class="tableItem bold">Class ID</td>
-    <td class="tableItem bold">Legal Fund Class</td>
-    <td class="tableItem bold">Inception Date</td>
-    <td class="tableItem bold">Invested Amount</td>
-    <td class="tableItem bold">Vehicle Type</td>
-    <td class="tableItem bold">Closure Status</td>
-    <td class="tableItem bold">Is Side Pocket?</td>
-    <td class="tableItem bold">Is Thematic?</td>
-    <td class="tableItem bold">Cogency Class?</td>
+    <th></th>
+    <th *ngFor=" let cluster of contaminantService.getClusterCounts()">Cluster {{cluster.cluster+1}}</th>
   </tr>
-
-  <tr *ngFor="let f of fundClassDetailsViewModelData ">
-  <td class="tableItem">{{ f.Description || "-"}}</td>
-  <td class="tableItem">{{f.Id || "-"}}</td>
-  <td class="tableItem">{{ f.LegalFundClassId || "-"}}</td>
-  <td class="tableItem">{{f.InceptionDate || "-"}}</td>
-  <td class="tableItem">{{ f.InvestedAmount || "-"}}</td>
-  <td class="tableItem">{{f.ClosureStatusId || "-"}}</td>
-  <td class="tableItem">{{ f.Description || "-"}}</td>
-  <td class="tableItem">{{f.IsSidePocket || "-"}}</td>
-  <td class="tableItem">{{ f.IsThematic || "-"}}</td>
-  <td class="tableItem">{{f.CogencyClassId || "-"}}</td>
+  <tr>
+    <td></td>
+    <td *ngFor=" let cluster of contaminantService.getClusterCounts()">{{cluster.avg_ctrl_percentage | number: '2.2-3'}} %</td>
   </tr>
-
-  </table>
-  <div #tooltip id="tooltip"></div>
-  <svg #tsneWrapper id="tsne-wrapper"></svg>
-  <svg #SampletsneWrapper id="sample-tsne-wrapper"></svg>
-
-
-
-  <!-- <svg id = "analysis_chart"> -->
-  <!--   <\!-- <filter id="sofGlow" height="300%" width="300%" x="-75%" y="-75%"> -\-> -->
-  <!--   <\!--   <\\!-- Thicken out the original shape -\\-> -\-> -->
-  <!--   <\!--   <feMorphology operator="dilate" radius="4" in="SourceAlpha" result="thicken" /> -\-> -->
-  <!--   <\!--   <\\!-- Use a gaussian blur to create the soft blurriness of the glow -\\-> -\-> -->
-  <!--   <\!--   <feGaussianBlur in="thicken" stdDeviation="10" result="blurred" /> -\-> -->
-  <!--   <\!--   <\\!-- Change the colour -\\-> -\-> -->
-  <!--   <\!--   <feFlood flood-color="rgb(0,186,255)" result="glowColor" /> -\-> -->
-  <!--   <\!--   <\\!-- Color in the glows -\\-> -\-> -->
-  <!--   <\!--   <feComposite in="glowColor" in2="blurred" operator="in" result="softGlow_colored" /> -\-> -->
-  <!--   <\!--   <\\!--	Layer the effects together -\\-> -\-> -->
-  <!--   <\!--   <feMerge> -\-> -->
-  <!--   <\!--     <feMergeNode in="softGlow_colored"/> -\-> -->
-  <!--   <\!--     <feMergeNode in="SourceGraphic"/> -\-> -->
-  <!--   <\!--   </feMerge> -\-> -->
-  <!--   <\!-- </filter> -\-> -->
-  <!-- </svg> -->
-</body>
+  <!-- Cluster -->
+  <tr *ngFor=" let file of jsonData['file']; let ndx = index">
+    <td>{{file}}</td>
+    <td *ngFor=" let cluster of contaminantService.getClusterCounts()">{{cluster.avg_sample_percent_string[ndx]}}</td>
+  </tr>
+</table>
+<svg #SampletsneWrapper id="sample-tsne-wrapper" class="svg-chart"></svg>

@@ -8,3 +8,11 @@
     border-radius: 5px;
     padding: 10px;
 }
+
+.svg-chart{
+    float:left;
+}
+
+.chart-table{
+    float:left;
+}
