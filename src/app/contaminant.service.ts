@@ -356,9 +356,9 @@ export class ContaminantService {
     for (var i = 0; i < nVal; i++) {
       let interval: number = 0;
       interval = Math.sqrt(mseVal * ((1 / nVal) + ((tX[i] - mX) ** 2) / (ssxVal))) * jStat.studentt.pdf(0.025, nVal - 2);
-      confBand.push([predY[i], predY[i] - interval, predY[i] + interval])
+      confBand.push([this.train.ctrl_reads_log[i], predY[i], predY[i] - interval, predY[i] + interval])
     }
-    console.log(confBand);	// Confidence band to plot
+    // console.log(confBand);	// Confidence band to plot
 
     let line_x: number[] = [];
     let diff = Math.max.apply(null, this.train.ctrl_reads_log) - Math.min.apply(null, this.train.ctrl_reads_log);
@@ -382,10 +382,10 @@ export class ContaminantService {
     this.pointCounts = Array(3).fill(0);
 
     for (let j = 0; j < this.currentPoints.length; j++) {
-      if (Math.pow(10, this.currentPoints[j].sample) > Math.pow(10, comparingPoints[j])) {
+      if (Math.pow(10, this.currentPoints[j].sample) > Math.pow(10, confBand[j][1])) {
         this.currentPoints[j].node_pos = 2;
         this.pointCounts[2] += 1
-      } else if (Math.pow(10, this.currentPoints[j].sample) == Math.pow(10, comparingPoints[j])) {
+      } else if (this.currentPoints[j].sample >= confBand[j][2] && this.currentPoints[j].sample <= confBand[j][3]) {
         this.currentPoints[j].node_pos = 1;
         this.pointCounts[1] += 1
       } else {
@@ -398,7 +398,7 @@ export class ContaminantService {
       }
     }
 
-    return predictions;
+    return [predictions,confBand];
   }
   //  push into lists in dictionaries, in preperation for comparing data of all samples in clussterplot 1
   findTotals(d: Taxon, rootReads: number[][], selectedsample: string) {

@@ -32,7 +32,17 @@
   <p id="loadingText"> Initializing plots . . .</p>
   <svg #chartWrapper id="chart-wrapper"></svg>
   <div #tooltip id="tooltip"></div>
+  <div style="display: inline-block">
   <svg #tsneWrapper id="tsne-wrapper"></svg>
+  </div>
+  <div style="display: inline-block">
+  <table>
+  <tr ng-repeat="x in names">
+    <td>{{ x.Name }}</td>
+    <td>{{ x.Country }}</td>
+  </tr>
+  </table>
+  </div>
   <svg #SampletsneWrapper id="sample-tsne-wrapper"></svg>
 
 

@@ -67,7 +67,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       pred => {
         this.updateplot(),
         this.tsnePlot(false),
-        this.updateline(pred)
+        this.updateLine(pred)
       });
   }
 
@@ -111,6 +111,24 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
     svg.append("path")
       .attr("id", "contaminant_line")
+      .attr("stroke-width", 2)
+      .style("stroke-dasharray", ("3, 3"))
+      .style('fill', 'none')
+      .style('stroke', '#fff');
+
+    svg.append("path")
+      .attr("id", "confidence_band")
+      .style('stroke', '#fff');
+
+    svg.append("path")
+      .attr("id", "lower_band")
+      .attr("stroke-width", 2)
+      .style("stroke-dasharray", ("3, 3"))
+      .style('fill', 'none')
+      .style('stroke', '#fff');
+
+    svg.append("path")
+      .attr("id", "upper_band")
       .attr("stroke-width", 2)
       .style("stroke-dasharray", ("3, 3"))
       .style('fill', 'none')
@@ -269,13 +287,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     let yAxis = d3.axisLeft(yline)
       .ticks(10);
 
-    svg.append("path")
-      .attr("id", "contaminant_line")
-      .attr("stroke-width", 2)
-      .style("stroke-dasharray", ("3, 3"))
-      .style('fill', 'none')
-      .style('stroke', '#fff');
-
     svg.append("g")
       .attr("class", "yaxis")
       .attr("transform", "translate(" + this.padding + ",0)")
@@ -336,6 +347,10 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     let svg = d3.select(this.svgEl.nativeElement);
 
     svg.select("#contaminant_line").style('stroke', '#fff');
+
+    svg.select("#confidence_band").attr('opacity', '0');
+    // svg.select("#confidence_band").style('fill', '#fff');
+
 
     var tooltip = d3.select(this.tooltipEl.nativeElement);
 
@@ -508,13 +523,42 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     console.log('update!');
   }
 
-  updateline(pred: number[][]) {
+  updateLine(pred: number[][]) {
+
     let current = this.contaminantService.getCurrentPoints();
     let pointCounts = this.contaminantService.getPointCounts();
     let padding = 50;
     let canvas_width = 800;
     let canvas_height = 500;
     var svg = d3.select("svg");
+
+    //unpack the confband and predicted points to plot lines
+    let predictedVal = pred[0];
+    let confidenceVal = pred[1];
+
+    let lowerVal = pred[1].map(function(value) {return [value[0],value[2]]});
+    let upperVal = pred[1].map(function(value) {return [value[0],value[3]]});
+
+    function sortFunction(a, b) {
+      if (a[0] === b[0]) {
+          return 0;
+      }
+      else {
+          return (a[0] < b[0]) ? -1 : 1;
+      }
+    }
+
+    confidenceVal.sort(sortFunction);
+
+    upperVal = upperVal.sort(sortFunction);
+    lowerVal = lowerVal.sort(sortFunction);
+
+    // let confidenceVal: number[][] = []
+    // confidenceVal[0] = upperVal.map(function(value) {return value[0]});
+    // confidenceVal[1] = upperVal.map(function(value) {return value[1]});
+    // confidenceVal[2] = lowerVal.map(function(value) {return value[1]});
+
+    // console.log(confidenceVal);
 
     var xScale = d3.scaleLinear()
       .domain([0, d3.max(current, function(d) {
@@ -535,13 +579,51 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .y(function(d) { return yScale(d[1]); })
       .curve(d3.curveMonotoneX);
 
+    var confidenceArea = d3.area()
+              .x(function(d) { return xScale(d[0]); })
+              .y0(function(d) {
+                  return yScale(d[1]); })
+              .y1(function(d) {
+                  return yScale(d[2]); });
+
     svg.select("#contaminant_line")
-      .datum(pred)
+      .datum(predictedVal)
       .attr("d", line)
       .attr("stroke-width", 2)
       .style("stroke-dasharray", ("3, 3"))
       .style('fill', 'none')
       .style('stroke', "#FF4533");
+
+    console.log(confidenceVal);
+
+    svg.select("#confidence_band")
+      .datum(confidenceVal)
+      .attr("fill", "#FF4533")
+      .attr("stroke", "none")
+      .attr("opacity", 0.5)
+      .attr("d", d3.area()
+        .x(function(d) { return xScale(d[0]); })
+        .y0(function(d) {
+            return yScale(d[2]); })
+        .y1(function(d) {
+            return yScale(d[3]); }));
+
+    // svg.select("#upper_band")
+    //   .datum(upperVal)
+    //   .attr("d", line)
+    //   .attr("stroke-width", 2)
+    //   .style("stroke-dasharray", ("3, 3"))
+    //   .style('fill', 'none')
+    //   .style('stroke', "#FF4533");
+    //
+    // svg.select("#lower_band")
+    //   .datum(lowerVal)
+    //   .attr("d", line)
+    //   .attr("stroke-width", 2)
+    //   .style("stroke-dasharray", ("3, 3"))
+    //   .style('fill', 'none')
+    //   .style('stroke', "#FF4533");
+
 
     svg.select("#aboveline")
       .attr("text-anchor", "end")
@@ -728,6 +810,39 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     if(clusterFlag){
       d3.selectAll(".clusterStats").remove();
       // d3.select("#idOfElement").remove();
+
+      // svg.select("foreignObject").remove();
+      //
+      // var table = svg.append("foreignObject")
+      //   .attr("id", "#table")
+      //   .attr("width", 500)
+      //   .attr("height", 300)
+      //   .attr("transform", "translate(" + (this.canvas_width) + "," + (80) + ")")
+      //   .append("xhtml:body");
+      //
+      //   table.append("table");
+      //   var header = table.append("thead").append("tr");
+      //   header.selectAll("th")
+      //         .data(clusterStats)
+      //         .enter()
+      //         .append("th")
+      //         .text(function(d) { return d.cluster; });
+      //
+      // table.append("table");
+      // var tablebody = table.append("tbody");
+      // let rows = tablebody
+      //         .selectAll("tr")
+      //         .data(clusterStats)
+      //         .enter()
+      //         .append("tr");
+      //
+      // let cells = rows.selectAll("td")
+      //         .data(function(d) { return d.avg_sample_percentage;})
+      //         .enter()
+      //         .append("td")
+      //         .text(function(d) {
+      //             return d;
+      //         });
 
       for (let i = 0; i<clusterStats.length; i++){
         svg.append("text")
