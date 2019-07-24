@@ -355,11 +355,10 @@ export class ContaminantService {
     let confBand: number[][] = [];
     for (var i = 0; i < nVal; i++) {
       let interval: number = 0;
-      interval = Math.sqrt(mseVal * ((1 / nVal) + ((tX[i] - mX) ** 2) / (ssxVal))) * jStat.studentt.pdf(0.025, nVal - 2);
-      confBand.push([this.train.ctrl_reads_log[i], predY[i], predY[i] - interval, predY[i] + interval])
+      interval = Math.sqrt(mseVal * ((1 / nVal) + ((tX[i] - mX) ** 2) / (ssxVal))) * jStat.studentt.inv(0.975, nVal - 2); // alpha = 0.05
+      confBand.push([tX[i], predY[i], predY[i] - interval, predY[i] + interval])
     }
-    // console.log(confBand);	// Confidence band to plot
-
+    console.log(confBand);	// Confidence band to plot
     let line_x: number[] = [];
     let diff = Math.max.apply(null, this.train.ctrl_reads_log) - Math.min.apply(null, this.train.ctrl_reads_log);
     diff /= 10;
@@ -382,12 +381,12 @@ export class ContaminantService {
     this.pointCounts = Array(3).fill(0);
 
     for (let j = 0; j < this.currentPoints.length; j++) {
-      if (Math.pow(10, this.currentPoints[j].sample) > Math.pow(10, confBand[j][1])) {
-        this.currentPoints[j].node_pos = 2;
-        this.pointCounts[2] += 1
-      } else if (this.currentPoints[j].sample >= confBand[j][2] && this.currentPoints[j].sample <= confBand[j][3]) {
+      if (this.currentPoints[j].sample >= confBand[j][2] && this.currentPoints[j].sample <= confBand[j][3]) {
         this.currentPoints[j].node_pos = 1;
         this.pointCounts[1] += 1
+      } else if (this.currentPoints[j].sample > confBand[j][1]) {
+        this.currentPoints[j].node_pos = 2;
+        this.pointCounts[2] += 1
       } else {
         this.pointCounts[0] += 1
       }
@@ -397,6 +396,7 @@ export class ContaminantService {
         }
       }
     }
+    console.log(this.pointCounts);
 
     return [predictions,confBand];
   }
@@ -568,7 +568,7 @@ export class ContaminantService {
       });
       let samplepercents = this.totalPoints['percentage'][i]
       this.clusterCounts[ans[i]]['taxa'] += 1;
-      this.clusterCounts[ans[i]]['avg_ctrl_percentage'] += samplepercents.pop();
+      this.clusterCounts[ans[i]]['avg_ctrl_percentage'] += this.clusterCounts[ans[i]]['avg_ctrl_percentage']+=this.totalPoints['percentage'][i][this.totalPoints['percentage'][i].length-1];
       this.clusterCounts[ans[i]]['avg_sample_percentage'] = this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j) => a + samplepercents[j]);
     }
 
@@ -582,6 +582,52 @@ export class ContaminantService {
           this.clusterCounts[i]["avg_sample_percent_string"][j] = String((this.clusterCounts[i]['avg_sample_percentage'][j] / this.clusterCounts[i]['taxa']).toExponential(2));
         }
         this.clusterCounts[i]['avg_sample_percentage'][j] = Number(Math.round((this.clusterCounts[i]['avg_sample_percentage'][j] / this.clusterCounts[i]['taxa']) * 1000) / 1000);
+      }
+    }
+  }
+
+  async updateClustering(selectClusters) {
+  this.clusterCounts = Array() as[{
+    "cluster": number,
+    "taxa": number,
+    "avg_ctrl_percentage": number,
+    "avg_sample_percentage": number[],
+    "avg_sample_percent_string": string[]
+  }]
+
+  let ans = kmeans(this.totalPoints['percentage'], selectClusters, {seed: 1234567891234, initialization: 'kmeans++'});
+  ans = ans['clusters']
+
+
+  for (let i = 0; i < selectClusters; i++){
+    this.clusterCounts[i]={
+      "cluster":i,
+      "taxa": 0,
+      "avg_ctrl_percentage": 0,
+      "avg_sample_percentage": Array(this.totalPoints['sample'][0].length).fill(0),
+      "avg_sample_percent_string":  Array(this.totalPoints['sample'][0].length)
+    }
+  }
+
+  for (let i = 0; i<this.plotTotalPoints.length; i++){
+    this.plotTotalPoints[i]["clusters"]=ans[i]
+    // let samplepercents = this.totalPoints['percentage'][i]
+    console.log(this.totalPoints['percentage'][i])
+    this.clusterCounts[ans[i]]['taxa']+=1;
+    this.clusterCounts[ans[i]]['avg_ctrl_percentage']+=this.totalPoints['percentage'][i][12];
+    this.clusterCounts[ans[i]]['avg_sample_percentage']=this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j)=> a+this.totalPoints['percentage'][i][j]);
+  }
+
+  for (let i = 0; i < selectClusters; i++){
+    this.clusterCounts[i]['avg_ctrl_percentage']=this.clusterCounts[i]['avg_ctrl_percentage']/this.clusterCounts[i]['taxa'];
+    for (let j = 0; j < this.clusterCounts[i]['avg_sample_percentage'].length; j++){
+      console.log(this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']);
+      if((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])>= 0.001 || (this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']) == 0){
+        this.clusterCounts[i]["avg_sample_percent_string"][j]= String(Math.round((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])*1000)/1000);
+      }else {
+        this.clusterCounts[i]["avg_sample_percent_string"][j]= String((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']).toExponential(2));
+      }
+      this.clusterCounts[i]['avg_sample_percentage'][j]=Number(Math.round((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])*1000)/1000);
       }
     }
   }

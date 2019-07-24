@@ -600,7 +600,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .datum(confidenceVal)
       .attr("fill", "#FF4533")
       .attr("stroke", "none")
-      .attr("opacity", 0.5)
+      .attr("opacity", 0.2)
       .attr("d", d3.area()
         .x(function(d) { return xScale(d[0]); })
         .y0(function(d) {
@@ -689,27 +689,29 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
 
+    var symbolGenerator = d3.symbol()
+     .size(100);
+
     var logScale = d3.scaleLog().domain([0.0000001, 5]);
 
     var circle = svg.selectAll(".taxon")
       .data(plotPoints);
 
     let circleEnter = circle.enter()
-      .append("circle")
+      .append("path")
       .attr("class", "taxon")
-      .attr("x", function(d) {
-        return xScale(d.tsneX);
+      .attr("transform", function(d){
+        return "translate("+xScale(d.tsneX)+","+yScale(d.tsneY)+")";
       })
-      .attr("y", function(d) {
-        return yScale(d.tsneY);
-      })
-      .style("r", function(d) {
-          if(d.pathogenic){
-            return 8/(Math.log(pointcount)/Math.log(20));
-          }else{
-            return 7/(Math.log(pointcount)/Math.log(20));
+      .attr("d", d3.symbol().type(function(d) {
+          if(d.node_pos==3 || d.node_pos==2){
+            return d3.symbolCircle;
+          }else if (d.node_pos==1){
+            return  d3.symbolTriangle;
+          }else {
+            return  d3.symbolCross;
           }
-        })
+        }))
       .style("opacity", function(d) {
           if (d.node_pos == 3) {
             return 1;
@@ -721,12 +723,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
             return 0.2;
           }
         })
-      .attr("cx", function(d) {
-        return xScale(d.tsneX);
-      })
-      .attr("cy", function(d) {
-        return yScale(d.tsneY);
-      })
       .on("mouseover", function(d) {
         d3.select(this).style("cursor", "pointer");
         if (d.pathogenic) {
@@ -739,36 +735,41 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .on("mouseout", function() { d3.select(this).style("cursor", "default"); return tooltip.style("visibility", "hidden"); })
       .attr("stroke-width", function(d) {
         if (d.pathogenic) {
-          return 2;
+          return 3;
         } else {
           return 0.6;
         }
       })
       .style("stroke", function(d) {
-        if (d.pathogenic) {
-          return '#E04836';
-        } else {
-          return '#000000';
-        }
+        return '#000000';
       })
       .style("fill", function(d) {
         return colorScale(d.clusters);
       });
 
     circleEnter.merge(circle)
-      .attr("x", function(d) {
-        return xScale(d.tsneX);
-      })
-      .attr("y", function(d) {
-        return yScale(d.tsneY);
-      })
-      .style("r", function(d) {
-          if(d.pathogenic){
-            return 8/(Math.log(pointcount)/Math.log(20));
-          }else{
-            return 7/(Math.log(pointcount)/Math.log(20));
+      // .attr("x", function(d) {
+      //   return xScale(d.tsneX);
+      // })
+      // .attr("y", function(d) {
+      //   return yScale(d.tsneY);
+      // })
+      // .style("r", function(d) {
+      //     if(d.pathogenic){
+      //       return 8/(Math.log(pointcount)/Math.log(20));
+      //     }else{
+      //       return 7/(Math.log(pointcount)/Math.log(20));
+      //     }
+      //   })
+      .attr("d", d3.symbol().type(function(d) {
+          if(d.node_pos==3 || d.node_pos==2){
+            return d3.symbolCircle;
+          }else if (d.node_pos==1){
+            return  d3.symbolTriangle;
+          }else {
+            return  d3.symbolCross;
           }
-        })
+        }))
       .style("opacity", function(d) {
           if (d.node_pos == 3) {
             return 1;
@@ -780,25 +781,24 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
             return 0.2;
           }
         })
-      .attr("cx", function(d) {
-        return xScale(d.tsneX);
+      .attr("transform", function(d){
+        return "translate("+xScale(d.tsneX)+","+yScale(d.tsneY)+")";
       })
-      .attr("cy", function(d) {
-        return yScale(d.tsneY);
-      })
+      // .attr("cx", function(d) {
+      //   return xScale(d.tsneX);
+      // })
+      // .attr("cy", function(d) {
+      //   return yScale(d.tsneY);
+      // })
       .attr("stroke-width", function(d) {
         if (d.pathogenic) {
-          return 2;
+          return 3;
         } else {
           return 0.6;
         }
       })
       .style("stroke", function(d) {
-        if (d.pathogenic) {
-          return '#E04836';
-        } else {
           return '#000000';
-        }
       })
       .style("fill", function(d) {
         return colorScale(d.clusters);
