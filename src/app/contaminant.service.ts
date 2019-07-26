@@ -9,6 +9,8 @@ import * as jStat from 'jStat';
 import * as tf from '@tensorflow/tfjs';
 import TSNE from 'tsne-js';
 
+import * as d3 from 'd3';
+
 import kmeans from 'ml-kmeans';
 
 import { UMAP } from 'umap-js';
@@ -26,6 +28,8 @@ export class ContaminantService {
   private selectedSample: string;
   private selectedTaxon: string;
   private rootReads: number[][];
+  private heatMapScale = null;
+  private confInt: Float32Array[][];
   private currentPoints: [{	// List of dict for d3 data() for scatterplot
     "control": number,
     "sample": number,
@@ -88,9 +92,13 @@ export class ContaminantService {
   private clusterCounts: [{ //output from the clustering algorithmn for clusterplot 1
     "cluster": number,
     "taxa": number,
+    "significant": number,
+    "contaminant": number,
+    "background": number,
     "avg_ctrl_percentage": number,
     "avg_sample_percentage": number[],
-    "avg_sample_percent_string": string[]
+    "avg_sample_percent_string": string[],
+    "color": number,
   }]
 
   constructor(
@@ -103,6 +111,23 @@ export class ContaminantService {
       console.log(`${operation} failed: ${error.message}`);
       return of(result as T);
     };
+  }
+
+  getHeatMapColor(x){
+    if(this.heatMapScale == null){
+      return "#FFFFF";
+    }
+    let bgColor = this.heatMapScale(x);
+    return d3.rgb(bgColor).hex();
+  }
+
+  getHeatMapTextColor(x){
+    if(this.heatMapScale == null){
+      return "#FFFFF";
+    }
+    let bgColor = this.heatMapScale(x);
+    let textColor = d3.hsl(bgColor).l > 0.5 ? "#000" : "#fff";
+    return textColor;
   }
   // return points for scatterplot
   getCurrentPoints(): [{
@@ -147,11 +172,21 @@ export class ContaminantService {
   getClusterCounts(): [{
     "cluster": number,
     "taxa": number,
+    "significant": number,
+    "contaminant": number,
+    "background": number,
     "avg_ctrl_percentage": number,
-    "avg_sample_percentage": number[]
-    "avg_sample_percent_string": string[]
+    "avg_sample_percentage": number[],
+    "avg_sample_percent_string": string[],
+    "color": number
   }] {
     return this.clusterCounts;
+  }
+  getConfInt(): Float32Array[][] {
+    return this.confInt;
+  }
+  getConfLabels(): string[] {
+    return ['','Intercept confidence interval'];
   }
 
   getTree(): Observable<any> {
@@ -344,7 +379,7 @@ export class ContaminantService {
     let seC = mse.mul(tf.add(tf.scalar(1).div(n), tf.sum(tf.square(meanX)).div(ssX))).sqrt();
     let confInt = [[m.dataSync(), m.sub(seM.mul(1.96)).dataSync(), m.add(seM.mul(1.96)).dataSync()], [c.dataSync(), c.sub(seC.mul(1.96)).dataSync(), c.add(seC.mul(1.96)).dataSync()]];
     console.log(confInt);	// First element is confint on slope. Second element is confint on intercept
-
+    this.confInt = confInt;
     // Compute confidence band
     let fitPred = Array.from(tf.stack([trueX, predY], 1).dataSync());
     let mX = meanX.dataSync()[0];
@@ -381,10 +416,10 @@ export class ContaminantService {
     this.pointCounts = Array(3).fill(0);
 
     for (let j = 0; j < this.currentPoints.length; j++) {
-      if (this.currentPoints[j].sample >= confBand[j][2] && this.currentPoints[j].sample <= confBand[j][3]) {
+      if (this.train.taxa_reads_log[j] >= confBand[j][2] && this.train.taxa_reads_log[j] <= confBand[j][3]) {
         this.currentPoints[j].node_pos = 1;
         this.pointCounts[1] += 1
-      } else if (this.currentPoints[j].sample > confBand[j][1]) {
+      } else if (this.train.taxa_reads_log[j] > confBand[j][3]) {
         this.currentPoints[j].node_pos = 2;
         this.pointCounts[2] += 1
       } else {
@@ -396,8 +431,6 @@ export class ContaminantService {
         }
       }
     }
-    console.log(this.pointCounts);
-
     return [predictions,confBand];
   }
   //  push into lists in dictionaries, in preperation for comparing data of all samples in clussterplot 1
@@ -413,9 +446,13 @@ export class ContaminantService {
     this.clusterCounts = Array() as [{
       "cluster": number,
       "taxa": number,
+      "significant": number,
+      "contaminant": number,
+      "background": number,
       "avg_ctrl_percentage": number,
       "avg_sample_percentage": number[],
-      "avg_sample_percent_string": string[]
+      "avg_sample_percent_string": string[],
+      "color": number
     }]
     this.plotTotalPoints = Array() as [{
       "control": number,
@@ -543,13 +580,19 @@ export class ContaminantService {
 
     await new Promise(resolve => setTimeout(resolve, 100));
 
+    var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+
     for (let i = 0; i < selectClusters; i++) {
       this.clusterCounts[i] = {
         "cluster": i,
         "taxa": 0,
+        "significant": 0,
+        "contaminant": 0,
+        "background": 0,
         "avg_ctrl_percentage": 0,
         "avg_sample_percentage": Array(this.totalPoints['sample'][0].length).fill(0),
-        "avg_sample_percent_string": Array(this.totalPoints['sample'][0].length)
+        "avg_sample_percent_string": Array(this.totalPoints['sample'][0].length),
+        "color": colorScale(i)
       }
     }
 
@@ -568,7 +611,7 @@ export class ContaminantService {
       });
       let samplepercents = this.totalPoints['percentage'][i]
       this.clusterCounts[ans[i]]['taxa'] += 1;
-      this.clusterCounts[ans[i]]['avg_ctrl_percentage'] += this.clusterCounts[ans[i]]['avg_ctrl_percentage']+=this.totalPoints['percentage'][i][this.totalPoints['percentage'][i].length-1];
+      this.clusterCounts[ans[i]]['avg_ctrl_percentage'] += this.totalPoints['percentage'][i][this.totalPoints['percentage'][i].length-1];
       this.clusterCounts[ans[i]]['avg_sample_percentage'] = this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j) => a + samplepercents[j]);
     }
 
@@ -584,28 +627,57 @@ export class ContaminantService {
         this.clusterCounts[i]['avg_sample_percentage'][j] = Number(Math.round((this.clusterCounts[i]['avg_sample_percentage'][j] / this.clusterCounts[i]['taxa']) * 1000) / 1000);
       }
     }
+
+    let minPercentage = d3.min(this.clusterCounts, function(arr) {
+      let m = d3.min(arr["avg_sample_percentage"]);
+      m = d3.min([m, arr["avg_ctrl_percentage"]]);
+      return m;
+    });;
+    let maxPercentage = d3.max(this.clusterCounts, function(arr) {
+      let m = d3.max(arr["avg_sample_percentage"]);
+      m = d3.max([m, arr["avg_ctrl_percentage"]]);
+      return m;
+    });
+
+    console.log("Percentage"+minPercentage+" "+maxPercentage);
+    let logScale = d3.scaleLog().base(1000)
+      .domain([1+minPercentage, 1+maxPercentage])
+    this.heatMapScale = d3.scaleSequential(
+        (d) => d3.interpolateYlGnBu(logScale(d))
+      );
+
+    console.log(this.clusterCounts)
   }
 
   async updateClustering(selectClusters) {
   this.clusterCounts = Array() as[{
     "cluster": number,
     "taxa": number,
+    "significant": number,
+    "contaminant": number,
+    "background": number,
     "avg_ctrl_percentage": number,
     "avg_sample_percentage": number[],
-    "avg_sample_percent_string": string[]
+    "avg_sample_percent_string": string[],
+    "color": number
   }]
 
   let ans = kmeans(this.totalPoints['percentage'], selectClusters, {seed: 1234567891234, initialization: 'kmeans++'});
   ans = ans['clusters']
 
+  var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
 
   for (let i = 0; i < selectClusters; i++){
     this.clusterCounts[i]={
       "cluster":i,
       "taxa": 0,
+      "significant": 0,
+      "contaminant": 0,
+      "background": 0,
       "avg_ctrl_percentage": 0,
       "avg_sample_percentage": Array(this.totalPoints['sample'][0].length).fill(0),
-      "avg_sample_percent_string":  Array(this.totalPoints['sample'][0].length)
+      "avg_sample_percent_string":  Array(this.totalPoints['sample'][0].length),
+      "color": colorScale(i)
     }
   }
 
@@ -613,8 +685,15 @@ export class ContaminantService {
     this.plotTotalPoints[i]["clusters"]=ans[i]
     // let samplepercents = this.totalPoints['percentage'][i]
     console.log(this.totalPoints['percentage'][i])
+    if(this.currentPoints[i]['node_pos']==2){
+      this.clusterCounts[ans[i]]['significant'] += 1;
+    }else if (this.currentPoints[i]['node_pos']==1){
+      this.clusterCounts[ans[i]]['contaminant'] += 1;
+    }else {
+      this.clusterCounts[ans[i]]['background'] += 1;
+    }
     this.clusterCounts[ans[i]]['taxa']+=1;
-    this.clusterCounts[ans[i]]['avg_ctrl_percentage']+=this.totalPoints['percentage'][i][12];
+    this.clusterCounts[ans[i]]['avg_ctrl_percentage']+=this.totalPoints['percentage'][i][this.totalPoints['percentage'][i].length-1];
     this.clusterCounts[ans[i]]['avg_sample_percentage']=this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j)=> a+this.totalPoints['percentage'][i][j]);
   }
 
@@ -630,6 +709,22 @@ export class ContaminantService {
       this.clusterCounts[i]['avg_sample_percentage'][j]=Number(Math.round((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])*1000)/1000);
       }
     }
+
+    let minPercentage = d3.min(this.clusterCounts, function(arr) {
+      return d3.min(arr["avg_sample_percentage"]);
+    });
+    let maxPercentage = d3.max(this.clusterCounts, function(arr) {
+      return d3.max(arr["avg_sample_percentage"]);
+    });
+
+    let logScale = d3.scaleLog().base(1000)
+      .domain([1+minPercentage, 1+maxPercentage])
+    this.heatMapScale = d3.scaleSequential(
+        (d) => d3.interpolateYlGnBu(logScale(d))
+      );
+      console.log(this.heatMapScale(0.2));
+
+    console.log(this.clusterCounts)
   }
   //generate cluster plot 2 data
   tsneSampleModel(d: Taxon): void {

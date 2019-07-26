@@ -60,20 +60,21 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   realize() {
     this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
     this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, this.scoreThreshold);
-    this.tsneModel(this.selectedSample).then(t => this.tsnePlot(true));
+    this.tsneModel(this.selectedSample).then(t => this.tsnePlot());
     this.contaminantService.prepareAnalysis(this.selectedSample, this.selectedTaxon); // Sets current points in service
     this.updateplot()
     this.contaminantService.trainAndPredict().then(
       pred => {
         this.updateplot(),
-          this.tsnePlot(false),
+          this.tsnePlot(),
+          this.updateCluster(),
           this.updateLine(pred)
       });
   }
 
   updateCluster() {
     this.contaminantService.updateClustering(this.selectClusters)
-    this.tsnePlot(true);
+    this.tsnePlot();
   }
   // initializes plots for later use
   initializePlot() {
@@ -178,15 +179,13 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("id", "belowline")
       .attr("transform", "translate(" + (this.canvas_width * 0.88) + "," + 90 + ")")
       .style("font-size", "15px");
-
-    document.getElementById("loadingText").innerHTML = "Select a sample from the dropdown";
   }
 
   initializeTsnePlot() {
 
     let svg = d3.select(this.svg2.nativeElement)
-      .attr("width", this.canvas_width + 500)
-      .attr("height", this.canvas_height);
+      .attr("width", this.canvas_width)
+      .attr("height", this.canvas_height+100);
 
     let xline = d3.scaleLog()
       .domain([0, 1])
@@ -259,6 +258,78 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("id", "belowline")
       .attr("transform", "translate(" + (this.canvas_width * 0.88) + "," + 90 + ")")
       .style("font-size", "15px");
+
+      // legend
+    svg.append("path")
+      .attr("d", d3.symbol().type(d3.symbolCircle))
+      .style("fill", '#ffffff')
+      .attr("transform",
+        "translate(" + (150) + " ," + (this.canvas_height - 24) + ")")
+      .attr("stroke-width", 0.6)
+      .style("stroke", '#000000');
+    svg.append("text")
+      .attr("transform",
+        "translate(" + (140) + " ," + (this.canvas_height - 20) + ")")
+      .style("text-anchor", "end")
+      .style("font-size", "16px")
+      .text("In sample:");
+
+      svg.append("path")
+        .attr("d", d3.symbol().type(d3.symbolSquare))
+        .style("fill", '#ffffff')
+        .attr("transform",
+          "translate(" + (150) + " ," + (this.canvas_height - 4) + ")")
+        .attr("stroke-width", 0.6)
+        .style("stroke", '#000000');
+      svg.append("text")
+        .attr("transform",
+          "translate(" + (140) + " ," + (this.canvas_height) + ")")
+        .style("text-anchor", "end")
+        .style("font-size", "16px")
+        .text("Contaminant:");
+
+      svg.append("path")
+        .attr("d", d3.symbol().type(d3.symbolCross))
+        .style("fill", '#ffffff')
+        .attr("transform",
+          "translate(" + (150) + " ," + (this.canvas_height + 16) + ")")
+        .attr("stroke-width", 0.6)
+        .style("stroke", '#000000');
+      svg.append("text")
+        .attr("transform",
+          "translate(" + (140) + " ," + (this.canvas_height + 20) + ")")
+        .style("text-anchor", "end")
+        .style("font-size", "16px")
+        .text("Background:");
+
+      svg.append("path")
+        .attr("d", d3.symbol().type(d3.symbolCircle))
+        .style("fill", '#ffffff')
+        .attr("transform",
+          "translate(" + (150) + " ," + (this.canvas_height + 36) + ")")
+        .attr("stroke-width", 3)
+        .style("stroke", '#000000');
+      svg.append("path")
+        .attr("d", d3.symbol().type(d3.symbolSquare))
+        .style("fill", '#ffffff')
+        .attr("transform",
+          "translate(" + (165) + " ," + (this.canvas_height + 36) + ")")
+        .attr("stroke-width", 3)
+        .style("stroke", '#000000');
+      svg.append("path")
+        .attr("d", d3.symbol().type(d3.symbolTriangle))
+        .style("fill", '#ffffff')
+        .attr("transform",
+          "translate(" + (180) + " ," + (this.canvas_height + 36) + ")")
+        .attr("stroke-width", 3)
+        .style("stroke", '#000000');
+      svg.append("text")
+        .attr("transform",
+          "translate(" + (140) + " ," + (this.canvas_height + 40) + ")")
+        .style("text-anchor", "end")
+        .style("font-size", "16px")
+        .text("Pathogens:");
+
   }
 
   initializeTsneSamplePlot() {
@@ -505,9 +576,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .text(this.selectedSample + " Reads");
 
     svg.select("#aboveline")
-      .attr("text-anchor", "end")
-      .attr("transform", "translate(" + (this.canvas_width * 0.88) + "," + 50 + ")")
-      .style("font-size", "15px")
+      .attr("text-anchor", "middle")
+      .attr("transform", "translate(" + (this.canvas_width*0.5) + "," + 100 + ")")
+      .style("font-size", "30px")
       .text("Analyzing. . .");
     svg.select("#online")
       .attr("text-anchor", "end")
@@ -653,13 +724,13 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     return model;
   }
 
-  tsnePlot(clusterFlag: boolean) {
+  tsnePlot() {
     let plotPoints = this.contaminantService.getPlotTotalPoints();
     let clusterStats = this.contaminantService.getClusterCounts();
 
     let svg = d3.select(this.svg2.nativeElement)
-      .attr("width", this.canvas_width + 500)
-      .attr("height", this.canvas_height);
+      .attr("width", this.canvas_width)
+      .attr("height", this.canvas_height+100);
 
     var tooltip = d3.select(this.tooltipEl.nativeElement);
 
@@ -710,7 +781,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         if (d.node_pos == 3 || d.node_pos == 2) {
           return d3.symbolCircle;
         } else if (d.node_pos == 1) {
-          return d3.symbolTriangle;
+          return d3.symbolSquare;
         } else {
           return d3.symbolCross;
         }
@@ -721,9 +792,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         } else if (d.node_pos == 2) {
           return 1;
         } else if (d.node_pos == 1) {
-          return 0.2;
+          return 0.5;
         } else {
-          return 0.2;
+          return 0.5;
         }
       })
       .on("mouseover", function(d) {
@@ -768,7 +839,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         if (d.node_pos == 3 || d.node_pos == 2) {
           return d3.symbolCircle;
         } else if (d.node_pos == 1) {
-          return d3.symbolTriangle;
+          return d3.symbolSquare;
         } else {
           return d3.symbolCross;
         }
@@ -779,9 +850,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         } else if (d.node_pos == 2) {
           return 1;
         } else if (d.node_pos == 1) {
-          return 0.2;
+          return 1;
         } else {
-          return 0.2;
+          return 1;
         }
       })
       .attr("transform", function(d) {
@@ -810,107 +881,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     circle.exit()
       .remove();
 
-    if (clusterFlag) {
-      d3.selectAll(".clusterStats").remove();
-      // d3.select("#idOfElement").remove();
-
-      // svg.select("foreignObject").remove();
-      //
-      // var table = svg.append("foreignObject")
-      //   .attr("id", "#table")
-      //   .attr("width", 500)
-      //   .attr("height", 300)
-      //   .attr("transform", "translate(" + (this.canvas_width) + "," + (80) + ")")
-      //   .append("xhtml:body");
-      //
-      //   table.append("table");
-      //   var header = table.append("thead").append("tr");
-      //   header.selectAll("th")
-      //         .data(clusterStats)
-      //         .enter()
-      //         .append("th")
-      //         .text(function(d) { return d.cluster; });
-      //
-      // table.append("table");
-      // var tablebody = table.append("tbody");
-      // let rows = tablebody
-      //         .selectAll("tr")
-      //         .data(clusterStats)
-      //         .enter()
-      //         .append("tr");
-      //
-      // let cells = rows.selectAll("td")
-      //         .data(function(d) { return d.avg_sample_percentage;})
-      //         .enter()
-      //         .append("td")
-      //         .text(function(d) {
-      //             return d;
-      //         });
-
-      for (let i = 0; i < clusterStats.length; i++) {
-        svg.append("text")
-          .attr("text-anchor", "start")
-          .attr("class", "clusterStats")
-          .attr("transform", "translate(" + (this.canvas_width - 70 + 70 * i) + "," + (80) + ")")
-          .style("font-size", "15px")
-          .style('fill', colorScale(i))
-          .style('stroke', '#000000')
-          .attr("stroke-width", 0.5)
-          .text("Cluster " + (1 + clusterStats[i].cluster));
-
-        svg.append("text")
-          .attr("text-anchor", "start")
-          .attr("class", "clusterStats")
-          .attr("transform", "translate(" + (this.canvas_width - 70 + 70 * i) + "," + (95) + ")")
-          .style("font-size", "15px")
-          .style('fill', colorScale(i))
-          .style('stroke', '#000000')
-          .attr("stroke-width", 0.5)
-          .text("taxa: " + clusterStats[i].taxa);
-
-        svg.append("text")
-          .attr("text-anchor", "start")
-          .attr("class", "clusterStats")
-          .attr("transform", "translate(" + (this.canvas_width - 70 + 70 * i) + "," + (110) + ")")
-          .style("font-size", "12px")
-          .style('fill', colorScale(i))
-          .style('stroke', '#000000')
-          .attr("stroke-width", 0.5)
-          .text("avg ctrl %:");
-
-        svg.append("text")
-          .attr("text-anchor", "start")
-          .attr("class", "clusterStats")
-          .attr("transform", "translate(" + (this.canvas_width - 70 + 70 * i) + "," + (125) + ")")
-          .style("font-size", "12px")
-          .style('fill', colorScale(i))
-          .style('stroke', '#000000')
-          .attr("stroke-width", 0.5)
-          .text((clusterStats[i].avg_ctrl_percentage).toExponential(2));
-
-        svg.append("text")
-          .attr("text-anchor", "start")
-          .attr("class", "clusterStats")
-          .attr("transform", "translate(" + (this.canvas_width - 70 + 70 * i) + "," + (140) + ")")
-          .style("font-size", "12px")
-          .style('fill', colorScale(i))
-          .style('stroke', '#000000')
-          .attr("stroke-width", 0.5)
-          .text("avg %:");
-
-        for (let j = 0; j < clusterStats[i].avg_sample_percentage.length; j++) {
-          svg.append("text")
-            .attr("text-anchor", "start")
-            .attr("class", "clusterStats")
-            .attr("transform", "translate(" + (this.canvas_width - 70 + 70 * i) + "," + (155 + 15 * j) + ")")
-            .style("font-size", "12px")
-            .style('fill', colorScale(i))
-            .style('stroke', '#000000')
-            .attr("stroke-width", 0.5)
-            .text("" + clusterStats[i].avg_sample_percent_string[j] + "");
-        }
-      }
-    }
   }
 
   tsneSamplePlot() {

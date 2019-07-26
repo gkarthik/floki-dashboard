@@ -1,3 +1,4 @@
+<div #tooltip id="tooltip"></div>
 <div class="row">
     <div class="form-row col-md">
       <div class="form-group col-md-2">
@@ -28,23 +29,69 @@
     </div>
 </div>
 
-<p id="loadingText"> Initializing plots . . .</p>
+<div class="row">
+  <div class="col-md-6">
 <svg #chartWrapper id="chart-wrapper" class="svg-chart"></svg>
-<div #tooltip id="tooltip" class="svg-chart"></div>
-<svg #tsneWrapper id="tsne-wrapper" class="svg-chart"></svg>
-<table class="chart-table table" *ngIf="jsonData['file']!=undefined">
+</div>
+<div class="col-md-6">
+<table class="table table-bordered" *ngIf="jsonData['file']!=undefined">
+  <thead class="thead-dark">
   <tr>
-    <th></th>
-    <th *ngFor=" let cluster of contaminantService.getClusterCounts()">Cluster {{cluster.cluster+1}}</th>
+    <th scope="col"></th>
+    <th scope="col">Estimate</th>
+    <th scope="col">2.5%</th>
+    <th scope="col">97.5%</th>
+  </tr>
+</thead>
+  <tr *ngFor=" let value of contaminantService.getConfInt(); let ind = index">
+    <th *ngIf="ind==0">Slope</th>
+    <th *ngIf="ind==1">Intercept</th>
+    <!-- <td *ngFor=" let name of contaminantService.getConfLabels()">{{name}}</td> -->
+    <td *ngFor=" let c of value">{{c}}</td>
+  </tr>
+</table>
+</div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+<svg #tsneWrapper id="tsne-wrapper" class="svg-chart"></svg>
+</div>
+<div class="col-md-6">
+<table class="table table-sm" *ngIf="jsonData['file']!=undefined">
+<thead>
+  <tr class="table-sm">
+    <th>Kmeans</th>
+    <th *ngFor=" let cluster of contaminantService.getClusterCounts()" [style.background-color]="cluster.color">Cluster {{cluster.cluster+1}}</th>
+  </tr>
+</thead>
+  <tr>
+    <td>Significant taxa</td>
+    <td *ngFor=" let cluster of contaminantService.getClusterCounts()">{{cluster.significant}}</td>
   </tr>
   <tr>
-    <td></td>
-    <td *ngFor=" let cluster of contaminantService.getClusterCounts()">{{cluster.avg_ctrl_percentage | number: '2.2-3'}} %</td>
+    <td>Contaminant taxa</td>
+    <td *ngFor=" let cluster of contaminantService.getClusterCounts()">{{cluster.contaminant}}</td>
+  </tr>
+  <tr>
+    <td>Background taxa</td>
+    <td *ngFor=" let cluster of contaminantService.getClusterCounts()">{{cluster.background}}</td>
+  </tr>
+  <tr>
+    <td>Average Ctrl %</td>
+    <td *ngFor=" let cluster of contaminantService.getClusterCounts()" [style.color]="contaminantService.getHeatMapTextColor(cluster.avg_ctrl_percentage+1)" [style.background-color]="contaminantService.getHeatMapColor(cluster.avg_ctrl_percentage+1)">{{cluster.avg_ctrl_percentage | number: '2.2-3'}} %</td>
   </tr>
   <!-- Cluster -->
   <tr *ngFor=" let file of jsonData['file']; let ndx = index">
     <td>{{file}}</td>
-    <td *ngFor=" let cluster of contaminantService.getClusterCounts()">{{cluster.avg_sample_percent_string[ndx]}}</td>
+    <td *ngFor=" let cluster of contaminantService.getClusterCounts()" [style.color]="contaminantService.getHeatMapTextColor(cluster.avg_sample_percentage[ndx]+1)" [style.background-color]="contaminantService.getHeatMapColor(cluster.avg_sample_percentage[ndx]+1)">{{cluster.avg_sample_percent_string[ndx]}} %</td>
   </tr>
 </table>
+</div>
+</div>
+
+<div class="row">
+  <div class="col">
 <svg #SampletsneWrapper id="sample-tsne-wrapper" class="svg-chart"></svg>
+</div>
+</div>
