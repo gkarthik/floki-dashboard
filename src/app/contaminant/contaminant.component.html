@@ -4,7 +4,7 @@
       <div class="form-group col-md-2">
         <label for="minOR">Sample:</label>
         <select [(ngModel)]="selectedSample" class="form-control" (ngModelChange)="realize()">
-          <option *ngFor="let c of jsonData.file" [ngValue]="c">{{c}}</option>
+          <option *ngFor="let c of jsonData.file" [ngValue]="c">{{c}} </option>
         </select>
       </div>
       <div class="form-group col-md-2">
@@ -79,12 +79,12 @@
   </tr>
   <tr>
     <td>Average Ctrl %</td>
-    <td *ngFor=" let cluster of contaminantService.getClusterCounts()" [style.color]="contaminantService.getHeatMapTextColor(cluster.avg_ctrl_percentage+1)" [style.background-color]="contaminantService.getHeatMapColor(cluster.avg_ctrl_percentage+1)">{{cluster.avg_ctrl_percentage | number: '2.2-3'}} %</td>
+    <td *ngFor=" let cluster of contaminantService.getClusterCounts()" [style.color]="contaminantService.getHeatMapTextColor(cluster.avg_ctrl_percentage+1)" [style.background-color]="contaminantService.getHeatMapColor(cluster.avg_ctrl_percentage+1)">{{cluster.avg_ctrl_percentage | number: '2.2-3'}}</td>
   </tr>
   <!-- Cluster -->
   <tr *ngFor=" let file of jsonData['file']; let ndx = index">
-    <td>{{file}}</td>
-    <td *ngFor=" let cluster of contaminantService.getClusterCounts()" [style.color]="contaminantService.getHeatMapTextColor(cluster.avg_sample_percentage[ndx]+1)" [style.background-color]="contaminantService.getHeatMapColor(cluster.avg_sample_percentage[ndx]+1)">{{cluster.avg_sample_percent_string[ndx]}} %</td>
+    <td>{{file}} %</td>
+    <td *ngFor=" let cluster of contaminantService.getClusterCounts()" [style.color]="contaminantService.getHeatMapTextColor(cluster.avg_sample_percentage[ndx]+1)" [style.background-color]="contaminantService.getHeatMapColor(cluster.avg_sample_percentage[ndx]+1)">{{cluster.avg_sample_percent_string[ndx]}}</td>
   </tr>
 </table>
 </div>

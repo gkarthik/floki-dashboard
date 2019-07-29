@@ -6,6 +6,7 @@ import { TaxonomyTreeService } from '../taxonomy-tree.service';
 import { ContaminantService } from '../contaminant.service';
 
 import * as d3 from 'd3';
+import scaleSymlog from 'd3-scale';
 
 @Component({
   selector: 'app-contaminant',
@@ -66,9 +67,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     this.contaminantService.trainAndPredict().then(
       pred => {
         this.updateplot(),
-          this.tsnePlot(),
-          this.updateCluster(),
-          this.updateLine(pred)
+        this.tsnePlot(),
+        this.updateCluster(),
+        this.updateLine(pred)
       });
   }
 
@@ -89,13 +90,13 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("width", this.canvas_width)
       .attr("height", this.canvas_height);
 
-    let xLScale = d3.scaleLog()
-      .domain([1, this.init_reads])
+    let xLScale = d3.scaleSymlog()
+      .domain([0, this.init_reads])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    let yLScale = d3.scaleLog()
-      .domain([1, this.init_reads])
+    let yLScale = d3.scaleSymlog()
+      .domain([0, this.init_reads])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
 
@@ -187,12 +188,12 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("width", this.canvas_width)
       .attr("height", this.canvas_height+100);
 
-    let xline = d3.scaleLog()
+    let xline = d3.scaleSymlog()
       .domain([0, 1])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    let yline = d3.scaleLog()
+    let yline = d3.scaleSymlog()
       .domain([0, 1])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
@@ -317,7 +318,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         .attr("stroke-width", 3)
         .style("stroke", '#000000');
       svg.append("path")
-        .attr("d", d3.symbol().type(d3.symbolTriangle))
+        .attr("d", d3.symbol().type(d3.symbolCross))
         .style("fill", '#ffffff')
         .attr("transform",
           "translate(" + (180) + " ," + (this.canvas_height + 36) + ")")
@@ -422,33 +423,31 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     svg.select("#confidence_band").attr('opacity', '0');
     // svg.select("#confidence_band").style('fill', '#fff');
 
-
     var tooltip = d3.select(this.tooltipEl.nativeElement);
 
-    var xScale = d3.scaleLinear()
+    var xLScale = d3.scaleSymlog()
       .domain([0, d3.max(current, function(d) {
         return d.control;
       })])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    var xLScale = d3.scaleLog()
-      .domain([1, d3.max(current, function(d) {
-        return Math.pow(10, d.control);
+    var xScale = d3.scaleSymlog()
+      .domain([0, d3.max(current, function(d) {
+        return d.control;
       })])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    var yScale = d3.scaleLinear()
+    var yScale = d3.scaleSymlog()
       .domain([0, d3.max(current, function(d) {
         return d.sample;
       })])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
-
-    var yLScale = d3.scaleLog()
-      .domain([1, d3.max(current, function(d) {
-        return Math.pow(10, d.sample);
+    var yLScale = d3.scaleSymlog()
+      .domain([0, d3.max(current, function(d) {
+        return d.sample;
       })])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
@@ -495,9 +494,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .on("mouseover", function(d) {
         d3.select(this).style("cursor", "pointer");
         if (d.pathogenic) {
-          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control) - 1) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample) - 1) + "<br/>" + "known pathogen");
+          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + d.control + "<br/>" + "Sample reads: " + d.sample + "<br/>" + "known pathogen");
         } else {
-          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(Math.pow(10, d.control) - 1) + "<br/>" + "Sample reads: " + Math.round(Math.pow(10, d.sample) - 1));
+          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + d.control + "<br/>" + "Sample reads: " + d.sample);
         }
       })
       .on("mousemove", function() { return tooltip.style("top", (d3.event.pageY - 10) + "px").style("left", (d3.event.pageX + 10) + "px"); })
@@ -561,13 +560,13 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .remove();
 
     var xAxis = d3.axisBottom(xLScale)
-      .ticks(10);
+      .ticks(8);
 
     svg.selectAll("g.xaxis")
       .call(xAxis);
 
     var yAxis = d3.axisLeft(yLScale)
-      .ticks(10);
+      .ticks(8);
 
     svg.selectAll("g.yaxis")
       .call(yAxis);
@@ -594,7 +593,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     console.log('update!');
   }
 
-  updateLine(pred: number[][]) {
+  updateLine(pred: number[][][]) {
 
     let current = this.contaminantService.getCurrentPoints();
     let pointCounts = this.contaminantService.getPointCounts();
@@ -603,6 +602,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     let canvas_height = 500;
     var svg = d3.select("svg");
 
+    console.log(pred)
     //unpack the confband and predicted points to plot lines
     let predictedVal = pred[0];
     let confidenceVal = pred[1];
@@ -631,14 +631,14 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
     // console.log(confidenceVal);
 
-    var xScale = d3.scaleLinear()
+    var xScale = d3.scaleSymlog()
       .domain([0, d3.max(current, function(d) {
         return d.control;
       })])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    var yScale = d3.scaleLinear()
+    var yScale = d3.scaleSymlog()
       .domain([0, d3.max(current, function(d) {
         return d.sample;
       })])
