@@ -101,7 +101,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .nice();
 
     let xAxis = d3.axisBottom(xLScale)
-      .ticks(10);
+      .ticks(2);
 
     svg.append("g")
       .attr("class", "xaxis")
@@ -109,7 +109,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .call(xAxis);
 
     let yAxis = d3.axisLeft(yLScale)
-      .ticks(10);
+      .ticks(2);
 
     svg.append("path")
       .attr("id", "contaminant_line")
@@ -494,9 +494,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .on("mouseover", function(d) {
         d3.select(this).style("cursor", "pointer");
         if (d.pathogenic) {
-          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + d.control + "<br/>" + "Sample reads: " + d.sample + "<br/>" + "known pathogen");
+          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " +Math.round(d.control) + "<br/>" + "Sample reads: " +Math.round(d.sample) + "<br/>" + "known pathogen");
         } else {
-          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + d.control + "<br/>" + "Sample reads: " + d.sample);
+          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(d.control) + "<br/>" + "Sample reads: " + Math.round(d.sample));
         }
       })
       .on("mousemove", function() { return tooltip.style("top", (d3.event.pageY - 10) + "px").style("left", (d3.event.pageX + 10) + "px"); })
@@ -560,13 +560,13 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .remove();
 
     var xAxis = d3.axisBottom(xLScale)
-      .ticks(8);
+      .ticks(5);
 
     svg.selectAll("g.xaxis")
       .call(xAxis);
 
     var yAxis = d3.axisLeft(yLScale)
-      .ticks(8);
+      .ticks(5);
 
     svg.selectAll("g.yaxis")
       .call(yAxis);

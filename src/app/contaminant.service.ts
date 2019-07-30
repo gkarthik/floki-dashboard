@@ -229,8 +229,8 @@ export class ContaminantService {
     let index = d.file.indexOf(this.selectedSample);
     if (d.taxon_name != "Homo sapiens" && d.rank == this.selectedTaxon) {
       if (d.taxon_reads[index] > 0 || d.ctrl_taxon_reads > 0) {
-        this.sampleData["control"].push(d.ctrl_taxon_reads+0.15*Math.random());
-        this.sampleData["sample"].push(d.taxon_reads[index]+0.15*Math.random());
+        this.sampleData["control"].push(d.ctrl_taxon_reads);
+        this.sampleData["sample"].push(d.taxon_reads[index]);
         this.sampleData["name"].push(d.taxon_name);
         this.sampleData["pathogenic"].push(d.pathogenic);
         this.sampleData["tax_id"].push(d.tax_id);
@@ -256,8 +256,8 @@ export class ContaminantService {
     }
     for (let j = 0; j < this.sampleData.control.length; j++) {
       this.currentPoints.push({
-        "control": this.sampleData.control[j],
-        "sample": this.sampleData.sample[j],
+        "control": this.sampleData.control[j]+0.15*Math.random(),
+        "sample": this.sampleData.sample[j]+0.15*Math.random(),
         "node_pos": 0,
         "name": this.sampleData.name[j],
         "pathogenic": this.sampleData.pathogenic[j],
@@ -329,7 +329,7 @@ export class ContaminantService {
       interval = Math.sqrt(mseVal * ((1 / nVal) + ((tX[i] - mX) ** 2) / (ssxVal))) * jStat.studentt.inv(0.975, nVal - 2); // alpha = 0.05
       confBand.push([Math.pow(10,tX[i])-1, Math.pow(10,predY[i])-1, Math.pow(10,(predY[i] - interval))-1, Math.pow(10,(predY[i] + interval))-1])
     }
-    console.log(confBand);	// Confidence band to plot
+
     let line_x: number[] = [];
     let diff = Math.max.apply(null, this.train.ctrl_reads_log) - Math.min.apply(null, this.train.ctrl_reads_log);
     diff /= 10;
@@ -341,13 +341,12 @@ export class ContaminantService {
     line_x.forEach((test, i) => {
       predictions.push([Math.pow(10,test)-1, Math.pow(10,line_y[i])-1]);
     });
-
-    line_x = this.train.ctrl_reads_log;
-    line_y = model(tf.tensor(line_x)).dataSync();
-    let comparingPoints: number[] = [];
-    line_x.forEach((test, i) => {
-      comparingPoints.push(line_y[i]);
-    });
+    //
+    // line_x = this.train.ctrl_reads_log;
+    // line_y = model(tf.tensor(line_x)).dataSync();
+    // line_x.forEach((test, i) => {
+    //   predictions.push([Math.pow(10,line_x[i])-1, Math.pow(10,line_y[i])-1])
+    // });
 
     this.pointCounts = Array(3).fill(0);
 
@@ -611,6 +610,54 @@ export class ContaminantService {
         (d) => d3.interpolateYlGnBu(logScale(d))
       );
   }
+  // get the data of all samples, to be displayed in clusterplot 2
+  sampleFindTotals(d: Taxon, rootReads: number[][]) {
+    this.SamplePoints = {
+      "control": [],
+      "ctrl_percentage": [],
+      "sample": [],
+      "percentage": [],
+      "name": [],
+      "pathogenic": [],
+      "tsneX": [],
+      "tsneY": [],
+      "tax_id": []
+    };
+    this.plotSamplePoints = Array() as [{
+      // "control": number[],
+      // "sample": number[],
+      // "percentage": number[][],
+      "name": string,
+      "cluster": number,
+      // "pathogenic": number[],
+      "tsneX": number,
+      "tsneY": number,
+      // "tax_id": number[][]
+    }];
+    for (let i = 0; i < d.taxon_reads.length; i++) {
+      this.SamplePoints["percentage"][i] = [];
+    }
+    this.sampleCountTotals(d, rootReads);
+  }
+
+// counting for the sample comparison TSNE:
+sampleCountTotals(d: Taxon, rootReads: number[][]): void {
+  // setting .som >100 increases consistency of plot
+  if (d.rank == "species" && d.taxon_name != "Homo sapiens" && d.taxon_reads.some(x => x > 1)) {
+    this.SamplePoints["control"].push(d.ctrl_taxon_reads);
+    this.SamplePoints["name"].push(d.taxon_name);
+    this.SamplePoints["pathogenic"].push(d.pathogenic);
+    this.SamplePoints["tax_id"].push(d.tax_id);
+    this.SamplePoints["ctrl_percentage"].push(100 * d.ctrl_taxon_reads / rootReads[1][0])
+    for (let i = 0; i < d.taxon_reads.length; i++) {
+      this.SamplePoints['percentage'][i].push(100 * d.taxon_reads[i] / rootReads[0][i]);
+    }
+  }
+
+  for (let i = 0; i < d.children.length; i++) {
+    this.sampleCountTotals(d.children[i], rootReads);
+  }
+}
   //generate cluster plot 2 data
   tsneSampleModel(d: Taxon): void {
 
