@@ -7,7 +7,7 @@ import * as _ from "lodash";
 
 import * as jStat from 'jStat';
 import * as tf from '@tensorflow/tfjs';
-import TSNE from 'tsne-js';
+import umap from 'umap-js';
 
 import * as d3 from 'd3';
 
@@ -52,8 +52,8 @@ export class ContaminantService {
     "percentage": number[],
     "name": string,
     "pathogenic": number,
-    "tsneX": number,
-    "tsneY": number,
+    "umapX": number,
+    "umapY": number,
     "node_pos": number,
     "tax_id": number,
     "clusters": number
@@ -65,15 +65,15 @@ export class ContaminantService {
     "percentage": number[][],
     "name": string[],
     "pathogenic": number[],
-    "tsneX": number,
-    "tsneY": number,
+    "umapX": number,
+    "umapY": number,
     "tax_id": number[][]
   }];
   private plotSamplePoints: [{  // List of dict for d3 data() for clusterplot 2
     "name": string,
     "cluster": number,
-    "tsneX": number,
-    "tsneY": number,
+    "umapX": number,
+    "umapY": number,
   }];
   // Sample data elements
   private sampleData: { // data parsed from the tree, for the scatter plot
@@ -147,8 +147,8 @@ export class ContaminantService {
     "percentage": number[],
     "name": string,
     "pathogenic": number
-    "tsneX": number,
-    "tsneY": number,
+    "umapX": number,
+    "umapY": number,
     "node_pos": number,
     "tax_id": number,
     "clusters": number
@@ -159,8 +159,8 @@ export class ContaminantService {
   getPlotSamplePoints(): [{
     "name": string,
     "cluster": number,
-    "tsneX": number,
-    "tsneY": number,
+    "umapX": number,
+    "umapY": number,
   }] {
     return this.plotSamplePoints;
   }
@@ -264,7 +264,7 @@ export class ContaminantService {
         "tax_id": this.sampleData.tax_id[j]
       });
     };
-    // find which points will be needed for the tsne (based on the current points in scatterplot1)
+    // find which points will be needed for the umap (based on the current points in scatterplot1)
     for (let j = 0; j < this.plotTotalPoints.length; j++) {
       this.plotTotalPoints[j].node_pos = 3;
       for (let k = 0; k < this.currentPoints.length; k++) {
@@ -295,12 +295,10 @@ export class ContaminantService {
         optimizer.minimize(() => {
           const predYs = model(x);
           const l = loss(y, predYs);
-          //  l.data().then(_ => console.log('Loss', _));
           return l;
         });
       });
     }
-    console.log("Finished");
 
     // Compute confidence intervals on slope and intercept
     let trueX = tf.tensor(this.train.ctrl_reads_log);
@@ -341,12 +339,6 @@ export class ContaminantService {
     line_x.forEach((test, i) => {
       predictions.push([Math.pow(10,test)-1, Math.pow(10,line_y[i])-1]);
     });
-    //
-    // line_x = this.train.ctrl_reads_log;
-    // line_y = model(tf.tensor(line_x)).dataSync();
-    // line_x.forEach((test, i) => {
-    //   predictions.push([Math.pow(10,line_x[i])-1, Math.pow(10,line_y[i])-1])
-    // });
 
     this.pointCounts = Array(3).fill(0);
 
@@ -396,8 +388,8 @@ export class ContaminantService {
       "percentage": number[],
       "name": string,
       "pathogenic": number,
-      "tsneX": number,
-      "tsneY": number,
+      "umapX": number,
+      "umapY": number,
       "node_pos": number,
       "tax_id": number,
       "clusters": number
@@ -422,19 +414,16 @@ export class ContaminantService {
       this.countTotals(d.children[i], rootReads, selectedsample);
     }
   }
-  // performing the umap, dbscan, kmeans
-  async dbClustering() {
-    let umap = new UMAP({ minDist: 1});
-    let output = umap.fit(this.totalPoints['percentage']);
 
-    let dbscan = new clustering.DBSCAN();
-    let dbclusters = dbscan.run(this.totalPoints['percentage'], 1, 1);
 
-    // let ans = kmeans(this.totalPoints['percentage'], dbclusters.length, {seed: 1234567891234, initialization: 'kmeans++'});
-
-    return await [output, dbclusters];
-    // ans
-  }
+  // async dbClustering() {
+  //   let umap = new UMAP({ minDist: 1});
+  //   let output = umap.fit(this.totalPoints['percentage']);
+  //   let dbscan = new clustering.DBSCAN();
+  //   let dbclusters = dbscan.run(this.totalPoints['percentage'], 1, 1)
+  //   // let ans = kmeans(this.totalPoints['percentage'], dbclusters.length, {seed: 1234567891234, initialization: 'kmeans++'});
+  //   return await [output, dbclusters];
+  // }
 
   cosine(x, y) {
     let result = 0.0;
@@ -478,21 +467,19 @@ export class ContaminantService {
     // ans
   }
 
-  //generate cluster plot 1 data
-  async tsneModel(selectClusters) {
+  // performing the umap, kmeans (or dbscan) to generate cluster plot 1 data
+  async umapModel(selectClusters) {
 
     await new Promise(resolve => setTimeout(resolve, 10));
 
-    if (false) {
-      let [output, dbclusters] = await this.dbClustering();
-      let ans = Array(this.totalPoints['percentage'].length).fill(0);
-
-      for (let i = 0; i < dbclusters.length; i++) {
-        for (let j = 0; j < dbclusters[i].length; j++) {
-          ans[dbclusters[i][j]] = i;
-        }
-      }
-    }
+    // let [output, dbclusters] = await this.dbClustering();
+    // let ans = Array(this.totalPoints['percentage'].length).fill(0);
+    //
+    // for (let i = 0; i < dbclusters.length; i++) {
+    //   for (let j = 0; j < dbclusters[i].length; j++) {
+    //     ans[dbclusters[i][j]] = i;
+    //   }
+    // }
 
     let [output, ans] = await this.kmeanClustering(selectClusters);
 
@@ -521,8 +508,8 @@ export class ContaminantService {
         "percentage": this.totalPoints['percentage'][i],
         "name": this.totalPoints['name'][i],
         "pathogenic": this.totalPoints['pathogenic'][i],
-        "tsneX": output[i][0],
-        "tsneY": output[i][1],
+        "umapX": output[i][0],
+        "umapY": output[i][1],
         "node_pos": 3,
         "clusters": ans[i],
         "tax_id": this.totalPoints['tax_id'][i]
@@ -650,20 +637,15 @@ export class ContaminantService {
       "percentage": [],
       "name": [],
       "pathogenic": [],
-      "tsneX": [],
-      "tsneY": [],
+      "umapX": [],
+      "umapY": [],
       "tax_id": []
     };
     this.plotSamplePoints = Array() as [{
-      // "control": number[],
-      // "sample": number[],
-      // "percentage": number[][],
       "name": string,
       "cluster": number,
-      // "pathogenic": number[],
-      "tsneX": number,
-      "tsneY": number,
-      // "tax_id": number[][]
+      "umapX": number,
+      "umapY": number,
     }];
     for (let i = 0; i < d.taxon_reads.length; i++) {
       this.SamplePoints["percentage"][i] = [];
@@ -671,7 +653,7 @@ export class ContaminantService {
     this.sampleCountTotals(d, rootReads);
   }
 
-// counting for the sample comparison TSNE:
+// counting for the sample comparison umap:
 sampleCountTotals(d: Taxon, rootReads: number[][]): void {
   // setting .som >100 increases consistency of plot
   if (d.rank == "species" && d.taxon_name != "Homo sapiens" && d.taxon_reads.some(x => x > 1)) {
@@ -690,17 +672,17 @@ sampleCountTotals(d: Taxon, rootReads: number[][]): void {
   }
 }
   //generate cluster plot 2 data
-  tsneSampleModel(d: Taxon): void {
+  umapSampleModel(d: Taxon): void {
 
-    let tsnesampledata = this.SamplePoints['percentage'].concat([this.SamplePoints['ctrl_percentage']])
+    let umapsampledata = this.SamplePoints['percentage'].concat([this.SamplePoints['ctrl_percentage']])
 
     let umap = new UMAP({distanceFn: this.manhattan, minDist: 1, nNeighbors: 2 });
-    let output = umap.fit(tsnesampledata);
+    let output = umap.fit(umapsampledata);
 
     let names = d.file.concat(['ctrl']);
 
     // let dbscan = new clustering.DBSCAN();
-    // let dbclusters = dbscan.run(tsnesampledata, 2, 1);
+    // let dbclusters = dbscan.run(umapsampledata, 2, 1);
     // console.log(dbclusters);
     //
     // let ans = Array(names.length).fill(0);;
@@ -709,15 +691,15 @@ sampleCountTotals(d: Taxon, rootReads: number[][]): void {
     //     ans[dbclusters[i][j]] = i;
     //   }
     // }
-    let ans = kmeans(tsnesampledata, 4, {distance: this.manhattan, seed:123123456789, initialization: 'kmeans++'});
+    let ans = kmeans(umapsampledata, 4, {distance: this.manhattan, seed:123123456789, initialization: 'kmeans++'});
     ans['clusters']
 
     for (let i = 0; i < output.length; i++) {
       this.plotSamplePoints.push({
         "name": names[i],
         "cluster": ans['clusters'][i],
-        "tsneX": output[i][1],
-        "tsneY": output[i][0],
+        "umapX": output[i][1],
+        "umapY": output[i][0],
       });
     }
 

@@ -22,8 +22,8 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
   @ViewChild('tooltip') private tooltipEl: ElementRef;
   @ViewChild('chartWrapper') private svgEl: ElementRef;
-  @ViewChild('tsneWrapper') private svg2: ElementRef;
-  @ViewChild('SampletsneWrapper') private svg3: ElementRef;
+  @ViewChild('umapWrapper') private svg2: ElementRef;
+  @ViewChild('SampleumapWrapper') private svg3: ElementRef;
 
   private jsonData: Taxon = new Taxon();
 
@@ -51,8 +51,8 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     let rootReads = this.taxonomyTreeService.getRootReads();
     this.initializePlot();
     this.contaminantService.sampleFindTotals(this.jsonData, rootReads);
-    this.contaminantService.tsneSampleModel(this.jsonData);
-    this.tsneSamplePlot();
+    this.contaminantService.umapSampleModel(this.jsonData);
+    this.umapSamplePlot();
   }
 
   ngAfterViewInit() {
@@ -61,13 +61,13 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   realize() {
     this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
     this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, this.scoreThreshold);
-    this.tsneModel(this.selectedSample).then(t => this.tsnePlot());
+    this.umapModel(this.selectedSample).then(t => this.umapPlot());
     this.contaminantService.prepareAnalysis(this.selectedSample, this.selectedTaxon); // Sets current points in service
     this.updateplot()
     this.contaminantService.trainAndPredict().then(
       pred => {
         this.updateplot(),
-        this.tsnePlot(),
+        this.umapPlot(),
         this.updateCluster(),
         this.updateLine(pred)
       });
@@ -75,13 +75,13 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
   updateCluster() {
     this.contaminantService.updateClustering(this.selectClusters)
-    this.tsnePlot();
+    this.umapPlot();
   }
   // initializes plots for later use
   initializePlot() {
     this.initializeScatterPlot();
-    this.initializeTsnePlot();
-    this.initializeTsneSamplePlot();
+    this.initializeumapPlot();
+    this.initializeumapSamplePlot();
   }
 
   initializeScatterPlot() {
@@ -183,7 +183,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .style("font-size", "15px");
   }
 
-  initializeTsnePlot() {
+  initializeumapPlot() {
 
     let svg = d3.select(this.svg2.nativeElement)
       .attr("width", this.canvas_width)
@@ -333,7 +333,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
   }
 
-  initializeTsneSamplePlot() {
+  initializeumapSamplePlot() {
 
     let svg = d3.select(this.svg3.nativeElement)
       .attr("width", this.canvas_width)
@@ -701,14 +701,14 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .text("Background: " + pointCounts[0]);
   }
 
-  tsneModel(selectedsample: string) {
+  umapModel(selectedsample: string) {
     let rootReads = this.taxonomyTreeService.getRootReads();
     this.contaminantService.findTotals(this.jsonData, rootReads, selectedsample);
-    let model = this.contaminantService.tsneModel(this.selectClusters);
+    let model = this.contaminantService.umapModel(this.selectClusters);
     return model;
   }
 
-  tsnePlot() {
+  umapPlot() {
     let plotPoints = this.contaminantService.getPlotTotalPoints();
     let clusterStats = this.contaminantService.getClusterCounts();
 
@@ -729,20 +729,20 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     // var colorScale = d3.scaleSequential((d)=>d3.interpolateSinebow(clusterscale(d)));
     var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
 
-    var xScaleTsne = d3.scaleLinear()
+    var xScaleumap = d3.scaleLinear()
       .domain([d3.min(plotPoints, function(d) {
-        return d.tsneX;
+        return d.umapX;
       }), d3.max(plotPoints, function(d) {
-        return d.tsneX;
+        return d.umapX;
       })])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    var yScaleTsne = d3.scaleLinear()
+    var yScaleumap = d3.scaleLinear()
       .domain([d3.min(plotPoints, function(d) {
-        return d.tsneY;
+        return d.umapY;
       }), d3.max(plotPoints, function(d) {
-        return d.tsneY;
+        return d.umapY;
       })])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
@@ -759,7 +759,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .append("path")
       .attr("class", "taxon")
       .attr("transform", function(d) {
-        return "translate(" + xScaleTsne(d.tsneX) + "," + yScaleTsne(d.tsneY) + ")";
+        return "translate(" + xScaleumap(d.umapX) + "," + yScaleumap(d.umapY) + ")";
       })
       .attr("d", d3.symbol().type(function(d) {
         if (d.node_pos == 3 || d.node_pos == 2) {
@@ -806,19 +806,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       });
 
     circleEnter.merge(circle)
-      // .attr("x", function(d) {
-      //   return xScale(d.tsneX);
-      // })
-      // .attr("y", function(d) {
-      //   return yScale(d.tsneY);
-      // })
-      // .style("r", function(d) {
-      //     if(d.pathogenic){
-      //       return 8/(Math.log(pointcount)/Math.log(20));
-      //     }else{
-      //       return 7/(Math.log(pointcount)/Math.log(20));
-      //     }
-      //   })
       .attr("d", d3.symbol().type(function(d) {
         if (d.node_pos == 3 || d.node_pos == 2) {
           return d3.symbolCircle;
@@ -840,14 +827,8 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         }
       })
       .attr("transform", function(d) {
-        return "translate(" + xScaleTsne(d.tsneX) + "," + yScaleTsne(d.tsneY) + ")";
+        return "translate(" + xScaleumap(d.umapX) + "," + yScaleumap(d.umapY) + ")";
       })
-      // .attr("cx", function(d) {
-      //   return xScale(d.tsneX);
-      // })
-      // .attr("cy", function(d) {
-      //   return yScale(d.tsneY);
-      // })
       .attr("stroke-width", function(d) {
         if (d.pathogenic) {
           return 3;
@@ -867,7 +848,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
   }
 
-  tsneSamplePlot() {
+  umapSamplePlot() {
     let plotPoints = this.contaminantService.getPlotSamplePoints();
     let pointCounts = plotPoints.length;
 
@@ -887,20 +868,20 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
     var colorScale = d3.scaleSequential((d) => d3.interpolateRdYlBu(clusterscale(d)));
 
-    var xScaleTsne2 = d3.scaleLinear()
+    var xScaleumap2 = d3.scaleLinear()
       .domain([d3.min(plotPoints, function(d) {
-        return d.tsneX - 0.1;
+        return d.umapX - 0.1;
       }), d3.max(plotPoints, function(d) {
-        return d.tsneX + 0.1;
+        return d.umapX + 0.1;
       })])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    var yScaleTsne2 = d3.scaleLinear()
+    var yScaleumap2 = d3.scaleLinear()
       .domain([d3.min(plotPoints, function(d) {
-        return d.tsneY - 0.1;
+        return d.umapY - 0.1;
       }), d3.max(plotPoints, function(d) {
-        return d.tsneY + 0.1;
+        return d.umapY + 0.1;
       })])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
@@ -911,10 +892,10 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .append("text")
       .attr("class", "dotlabel")
       .attr("x", function(d) {
-        return xScaleTsne2(d.tsneX);
+        return xScaleumap2(d.umapX);
       })
       .attr("y", function(d) {
-        return yScaleTsne2(d.tsneY);
+        return yScaleumap2(d.umapY);
       })
       .attr("dx", ".71em")
       .attr("dy", ".35em")
@@ -927,17 +908,17 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .append("circle")
       .attr("class", "taxon")
       .attr("x", function(d) {
-        return xScaleTsne2(d.tsneX);
+        return xScaleumap2(d.umapX);
       })
       .attr("y", function(d) {
-        return yScaleTsne2(d.tsneY);
+        return yScaleumap2(d.umapY);
       })
       .attr("r", 5 / Math.log10(pointCounts))
       .attr("cx", function(d) {
-        return xScaleTsne2(d.tsneX);
+        return xScaleumap2(d.umapX);
       })
       .attr("cy", function(d) {
-        return yScaleTsne2(d.tsneY);
+        return yScaleumap2(d.umapY);
       })
       .on("mouseover", function(d) {
         d3.select(this).style("cursor", "pointer");
@@ -954,17 +935,17 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
     circleEnter.merge(circle)
       .attr("x", function(d) {
-        return xScaleTsne2(d.tsneX);
+        return xScaleumap2(d.umapX);
       })
       .attr("y", function(d) {
-        return yScaleTsne2(d.tsneY);
+        return yScaleumap2(d.umapY);
       })
       .attr("r", 5 / Math.log10(pointCounts))
       .attr("cx", function(d) {
-        return xScaleTsne2(d.tsneX);
+        return xScaleumap2(d.umapX);
       })
       .attr("cy", function(d) {
-        return yScaleTsne2(d.tsneY);
+        return yScaleumap2(d.umapY);
       })
       .attr("stroke-width", function(d) {
         if (d.pathogenic) {
