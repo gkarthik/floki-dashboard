@@ -100,6 +100,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
 
+
     let xAxis = d3.axisBottom(xScale)
       .ticks(2);
 
@@ -205,8 +206,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("transform", "translate(0," + (this.canvas_height - this.padding) + ")")
       .call(xAxis);
 
-    let yAxis = d3.axisLeft(yline)
-      .ticks(10);
+    let yAxis = d3.axisLeft(yline);
 
     svg.append("path")
       .attr("id", "contaminant_line")
@@ -356,8 +356,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("transform", "translate(0," + (this.canvas_height - this.padding) + ")")
       .call(xAxis);
 
-    let yAxis = d3.axisLeft(yline)
-      .ticks(10);
+    let yAxis = d3.axisLeft(yline);
 
     svg.append("g")
       .attr("class", "yaxis")
@@ -545,14 +544,43 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     circle.exit()
       .remove();
 
+    let tickvalX = [];
+    let j = 0;
+    while (Math.pow(10, j) < d3.max(current, function(d){return d.control;})){
+      tickvalX.push(0.2*Math.pow(10,j))
+      tickvalX.push(0.5*Math.pow(10,j))
+      tickvalX.push(1*Math.pow(10,j))
+      j++
+    }
+    let maxval = d3.max(current, function(d){return d.control;}).toPrecision(1);
+    console.log(tickvalX[tickvalX.length])
+    if(tickvalX[tickvalX.length-1]!=maxval){
+      tickvalX.push(maxval);
+    }
+
     let xAxis = d3.axisBottom(xScale)
-      .ticks(5);
+      .tickValues(tickvalX);
 
     svg.selectAll("g.xaxis")
       .call(xAxis);
 
+    let tickvalY = [];
+
+    j = 1;
+    while (Math.pow(10, j) < d3.max(current, function(d){return d.sample;})){
+      tickvalY.push(0.2*Math.pow(10,j))
+      tickvalY.push(0.5*Math.pow(10,j))
+      tickvalY.push(1*Math.pow(10,j))
+      j++
+    }
+
+    maxval = d3.max(current, function(d){return d.sample;}).toPrecision(1);
+    console.log(tickvalY[tickvalY.length])
+    if(tickvalY[tickvalY.length-1]!=maxval){
+      tickvalY.push(maxval);
+    }
     let yAxis = d3.axisLeft(yScale)
-      .ticks(5);
+      .tickValues(tickvalY);
 
     svg.selectAll("g.yaxis")
       .call(yAxis);
