@@ -189,12 +189,12 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("width", this.canvas_width)
       .attr("height", this.canvas_height+100);
 
-    let xline = d3.scaleSymlog()
+    let xline = d3.scaleLog()
       .domain([0, 1])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    let yline = d3.scaleSymlog()
+    let yline = d3.scaleLog()
       .domain([0, 1])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
@@ -545,7 +545,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .remove();
 
     let tickvalX = [];
-    let j = 0;
+    let j = 1;
     while (Math.pow(10, j) < d3.max(current, function(d){return d.control;})){
       tickvalX.push(0.2*Math.pow(10,j))
       tickvalX.push(0.5*Math.pow(10,j))
@@ -553,7 +553,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       j++
     }
     let maxval = d3.max(current, function(d){return d.control;}).toPrecision(1);
-    console.log(tickvalX[tickvalX.length])
+
     if(tickvalX[tickvalX.length-1]!=maxval){
       tickvalX.push(maxval);
     }
@@ -573,9 +573,8 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       tickvalY.push(1*Math.pow(10,j))
       j++
     }
-
     maxval = d3.max(current, function(d){return d.sample;}).toPrecision(1);
-    console.log(tickvalY[tickvalY.length])
+
     if(tickvalY[tickvalY.length-1]!=maxval){
       tickvalY.push(maxval);
     }
@@ -603,8 +602,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("transform", "translate(" + (this.canvas_width * 0.88) + "," + 90 + ")")
       .style("font-size", "15px")
       .text("");
-
-    console.log('update!');
   }
 
   updateLine(pred: number[][][]) {
@@ -616,7 +613,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     let canvas_height = 500;
     let svg = d3.select("svg");
 
-    console.log(pred)
     //unpack the confband and predicted points to plot lines
     let predictedVal = pred[0];
     let confidenceVal = pred[1];
@@ -673,8 +669,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .style("stroke-dasharray", ("3, 3"))
       .style('fill', 'none')
       .style('stroke', "#FF4533");
-
-    console.log(confidenceVal);
 
     svg.select("#confidence_band")
       .datum(confidenceVal)
