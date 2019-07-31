@@ -424,7 +424,7 @@ export class ContaminantService {
   }
   // performing the umap, dbscan, kmeans
   async dbClustering() {
-    let umap = new UMAP({ minDist: 0.4 });
+    let umap = new UMAP({ minDist: 1});
     let output = umap.fit(this.totalPoints['percentage']);
 
     let dbscan = new clustering.DBSCAN();
@@ -435,18 +435,49 @@ export class ContaminantService {
     return await [output, dbclusters];
     // ans
   }
+
+  cosine(x, y) {
+    let result = 0.0;
+    let normX = 0.0;
+    let normY = 0.0;
+
+    for (let i = 0; i < x.length; i++) {
+      result += x[i] * y[i];
+      normX += x[i] ** 2;
+      normY += y[i] ** 2;
+    }
+
+    if (normX === 0 && normY === 0) {
+      return 0;
+    } else if (normX === 0 || normY === 0) {
+      return 1.0;
+    } else {
+      return 1.0 - result / Math.sqrt(normX * normY);
+    }
+  }
+
+  manhattan(a, b) {
+    var manhattan = 0
+    var dim = a.length
+    for (var i = 0; i < dim; i++) {
+      manhattan += Math.abs((b[i] || 0) - (a[i] || 0))
+    }
+    return manhattan
+  }
+
   async kmeanClustering(selectClusters) {
-    let umap = new UMAP({ minDist: 0.4 });
+    let umap = new UMAP({distanceFn:this.manhattan, minDist: 1, nNeighbors:15, spread:10});
     let output = umap.fit(this.totalPoints['percentage']);
 
     // let dbscan = new clustering.DBSCAN();
     // let dbclusters = dbscan.run(this.totalPoints['percentage'], 1, 1);
     console.log(selectClusters);
-    let ans = kmeans(this.totalPoints['percentage'], selectClusters, { seed: 1234567891234, initialization: 'kmeans++' });
+    let ans = kmeans(this.totalPoints['percentage'], selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++' });
 
     return await [output, ans['clusters']];
     // ans
   }
+
   //generate cluster plot 1 data
   async tsneModel(selectClusters) {
 
@@ -663,28 +694,28 @@ sampleCountTotals(d: Taxon, rootReads: number[][]): void {
 
     let tsnesampledata = this.SamplePoints['percentage'].concat([this.SamplePoints['ctrl_percentage']])
 
-    let umap = new UMAP({ minDist: 0.7, nNeighbors: 2 });
+    let umap = new UMAP({distanceFn: this.manhattan, minDist: 1, nNeighbors: 2 });
     let output = umap.fit(tsnesampledata);
 
     let names = d.file.concat(['ctrl']);
 
-    let dbscan = new clustering.DBSCAN();
-    let dbclusters = dbscan.run(tsnesampledata, 2, 1);
-    console.log(dbclusters);
-
-    let ans = Array(names.length).fill(0);;
-    for (let i = 0; i < dbclusters.length; i++) {
-      for (let j = 0; j < dbclusters[i].length; j++) {
-        ans[dbclusters[i][j]] = i;
-      }
-    }
-    // let ans = kmeans(tsnesampledata, dbclusters.length, {seed:123123456789, initialization: 'kmeans++'});
-    // ans['clusters']
+    // let dbscan = new clustering.DBSCAN();
+    // let dbclusters = dbscan.run(tsnesampledata, 2, 1);
+    // console.log(dbclusters);
+    //
+    // let ans = Array(names.length).fill(0);;
+    // for (let i = 0; i < dbclusters.length; i++) {
+    //   for (let j = 0; j < dbclusters[i].length; j++) {
+    //     ans[dbclusters[i][j]] = i;
+    //   }
+    // }
+    let ans = kmeans(tsnesampledata, 4, {distance: this.manhattan, seed:123123456789, initialization: 'kmeans++'});
+    ans['clusters']
 
     for (let i = 0; i < output.length; i++) {
       this.plotSamplePoints.push({
         "name": names[i],
-        "cluster": ans[i],
+        "cluster": ans['clusters'][i],
         "tsneX": output[i][1],
         "tsneY": output[i][0],
       });

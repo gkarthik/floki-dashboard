@@ -90,17 +90,17 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("width", this.canvas_width)
       .attr("height", this.canvas_height);
 
-    let xLScale = d3.scaleSymlog()
+    let xScale = d3.scaleSymlog()
       .domain([0, this.init_reads])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    let yLScale = d3.scaleSymlog()
+    let yScale = d3.scaleSymlog()
       .domain([0, this.init_reads])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
 
-    let xAxis = d3.axisBottom(xLScale)
+    let xAxis = d3.axisBottom(xScale)
       .ticks(2);
 
     svg.append("g")
@@ -108,7 +108,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("transform", "translate(0," + (this.canvas_height - this.padding) + ")")
       .call(xAxis);
 
-    let yAxis = d3.axisLeft(yLScale)
+    let yAxis = d3.axisLeft(yScale)
       .ticks(2);
 
     svg.append("path")
@@ -421,31 +421,17 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     svg.select("#contaminant_line").style('stroke', '#fff');
 
     svg.select("#confidence_band").attr('opacity', '0');
-    // svg.select("#confidence_band").style('fill', '#fff');
 
     var tooltip = d3.select(this.tooltipEl.nativeElement);
 
-    var xLScale = d3.scaleSymlog()
+    let xScale = d3.scaleSymlog()
       .domain([0, d3.max(current, function(d) {
         return d.control;
       })])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    var xScale = d3.scaleSymlog()
-      .domain([0, d3.max(current, function(d) {
-        return d.control;
-      })])
-      .range([this.padding, this.canvas_width - this.padding * 2])
-      .nice();
-
-    var yScale = d3.scaleSymlog()
-      .domain([0, d3.max(current, function(d) {
-        return d.sample;
-      })])
-      .range([this.canvas_height - this.padding, this.padding])
-      .nice();
-    var yLScale = d3.scaleSymlog()
+    let yScale = d3.scaleSymlog()
       .domain([0, d3.max(current, function(d) {
         return d.sample;
       })])
@@ -559,13 +545,13 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     circle.exit()
       .remove();
 
-    var xAxis = d3.axisBottom(xLScale)
+    let xAxis = d3.axisBottom(xScale)
       .ticks(5);
 
     svg.selectAll("g.xaxis")
       .call(xAxis);
 
-    var yAxis = d3.axisLeft(yLScale)
+    let yAxis = d3.axisLeft(yScale)
       .ticks(5);
 
     svg.selectAll("g.yaxis")
@@ -600,7 +586,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     let padding = 50;
     let canvas_width = 800;
     let canvas_height = 500;
-    var svg = d3.select("svg");
+    let svg = d3.select("svg");
 
     console.log(pred)
     //unpack the confband and predicted points to plot lines
@@ -624,21 +610,14 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     upperVal = upperVal.sort(sortFunction);
     lowerVal = lowerVal.sort(sortFunction);
 
-    // let confidenceVal: number[][] = []
-    // confidenceVal[0] = upperVal.map(function(value) {return value[0]});
-    // confidenceVal[1] = upperVal.map(function(value) {return value[1]});
-    // confidenceVal[2] = lowerVal.map(function(value) {return value[1]});
-
-    // console.log(confidenceVal);
-
-    var xScale = d3.scaleSymlog()
+    let xScale = d3.scaleSymlog()
       .domain([0, d3.max(current, function(d) {
         return d.control;
       })])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    var yScale = d3.scaleSymlog()
+    let yScale = d3.scaleSymlog()
       .domain([0, d3.max(current, function(d) {
         return d.sample;
       })])
@@ -682,23 +661,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         .y1(function(d) {
           return yScale(d[3]);
         }));
-
-    // svg.select("#upper_band")
-    //   .datum(upperVal)
-    //   .attr("d", line)
-    //   .attr("stroke-width", 2)
-    //   .style("stroke-dasharray", ("3, 3"))
-    //   .style('fill', 'none')
-    //   .style('stroke', "#FF4533");
-    //
-    // svg.select("#lower_band")
-    //   .datum(lowerVal)
-    //   .attr("d", line)
-    //   .attr("stroke-width", 2)
-    //   .style("stroke-dasharray", ("3, 3"))
-    //   .style('fill', 'none')
-    //   .style('stroke', "#FF4533");
-
 
     svg.select("#aboveline")
       .attr("text-anchor", "end")
@@ -745,7 +707,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     // var colorScale = d3.scaleSequential((d)=>d3.interpolateSinebow(clusterscale(d)));
     var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
 
-    var xScale = d3.scaleLinear()
+    var xScaleTsne = d3.scaleLinear()
       .domain([d3.min(plotPoints, function(d) {
         return d.tsneX;
       }), d3.max(plotPoints, function(d) {
@@ -754,7 +716,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    var yScale = d3.scaleLinear()
+    var yScaleTsne = d3.scaleLinear()
       .domain([d3.min(plotPoints, function(d) {
         return d.tsneY;
       }), d3.max(plotPoints, function(d) {
@@ -775,7 +737,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .append("path")
       .attr("class", "taxon")
       .attr("transform", function(d) {
-        return "translate(" + xScale(d.tsneX) + "," + yScale(d.tsneY) + ")";
+        return "translate(" + xScaleTsne(d.tsneX) + "," + yScaleTsne(d.tsneY) + ")";
       })
       .attr("d", d3.symbol().type(function(d) {
         if (d.node_pos == 3 || d.node_pos == 2) {
@@ -856,7 +818,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         }
       })
       .attr("transform", function(d) {
-        return "translate(" + xScale(d.tsneX) + "," + yScale(d.tsneY) + ")";
+        return "translate(" + xScaleTsne(d.tsneX) + "," + yScaleTsne(d.tsneY) + ")";
       })
       // .attr("cx", function(d) {
       //   return xScale(d.tsneX);
@@ -903,7 +865,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
     var colorScale = d3.scaleSequential((d) => d3.interpolateRdYlBu(clusterscale(d)));
 
-    var xScale = d3.scaleLinear()
+    var xScaleTsne2 = d3.scaleLinear()
       .domain([d3.min(plotPoints, function(d) {
         return d.tsneX - 0.1;
       }), d3.max(plotPoints, function(d) {
@@ -912,7 +874,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    var yScale = d3.scaleLinear()
+    var yScaleTsne2 = d3.scaleLinear()
       .domain([d3.min(plotPoints, function(d) {
         return d.tsneY - 0.1;
       }), d3.max(plotPoints, function(d) {
@@ -927,10 +889,10 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .append("text")
       .attr("class", "dotlabel")
       .attr("x", function(d) {
-        return xScale(d.tsneX);
+        return xScaleTsne2(d.tsneX);
       })
       .attr("y", function(d) {
-        return yScale(d.tsneY);
+        return yScaleTsne2(d.tsneY);
       })
       .attr("dx", ".71em")
       .attr("dy", ".35em")
@@ -943,17 +905,17 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .append("circle")
       .attr("class", "taxon")
       .attr("x", function(d) {
-        return xScale(d.tsneX);
+        return xScaleTsne2(d.tsneX);
       })
       .attr("y", function(d) {
-        return yScale(d.tsneY);
+        return yScaleTsne2(d.tsneY);
       })
       .attr("r", 5 / Math.log10(pointCounts))
       .attr("cx", function(d) {
-        return xScale(d.tsneX);
+        return xScaleTsne2(d.tsneX);
       })
       .attr("cy", function(d) {
-        return yScale(d.tsneY);
+        return yScaleTsne2(d.tsneY);
       })
       .on("mouseover", function(d) {
         d3.select(this).style("cursor", "pointer");
@@ -970,17 +932,17 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
     circleEnter.merge(circle)
       .attr("x", function(d) {
-        return xScale(d.tsneX);
+        return xScaleTsne2(d.tsneX);
       })
       .attr("y", function(d) {
-        return yScale(d.tsneY);
+        return yScaleTsne2(d.tsneY);
       })
       .attr("r", 5 / Math.log10(pointCounts))
       .attr("cx", function(d) {
-        return xScale(d.tsneX);
+        return xScaleTsne2(d.tsneX);
       })
       .attr("cy", function(d) {
-        return yScale(d.tsneY);
+        return yScaleTsne2(d.tsneY);
       })
       .attr("stroke-width", function(d) {
         if (d.pathogenic) {
