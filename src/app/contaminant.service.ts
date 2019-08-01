@@ -274,6 +274,16 @@ export class ContaminantService {
       }
     }
   }
+
+  async optimization(ds, optimizer, model, loss){
+    await ds.forEachAsync(({ x, y }) => {
+      optimizer.minimize(() => {
+        const predYs = model(x);
+        const l = loss(y, predYs);
+        return l;
+      });
+    });
+  }
   // train the regression and then predict points, determining which points are above or below
   async trainAndPredict() {
 
@@ -290,14 +300,8 @@ export class ContaminantService {
     const loss = (pred, label) => pred.sub(label).square().mean();
 
     for (let epoch = 0; epoch < 100; epoch++) {
-      await new Promise(resolve => setTimeout(resolve, 1));
-      await ds.forEachAsync(({ x, y }) => {
-        optimizer.minimize(() => {
-          const predYs = model(x);
-          const l = loss(y, predYs);
-          return l;
-        });
-      });
+      await new Promise(resolve => setTimeout(resolve, 4));
+      await this.optimization(ds, optimizer, model, loss);
     }
 
     // Compute confidence intervals on slope and intercept
@@ -358,7 +362,7 @@ export class ContaminantService {
         }
       }
     }
-    return [predictions,confBand];
+    return [predictions, confBand];
   }
 
   //  push into lists in dictionaries, in preperation for comparing data of all samples in clussterplot 1
@@ -454,7 +458,7 @@ export class ContaminantService {
     return manhattan
   }
 
-  async kmeanClustering(selectClusters) {
+  kmeanClustering(selectClusters) {
     let umap = new UMAP({distanceFn:this.manhattan, minDist: 1, nNeighbors:15, spread:10});
     let output = umap.fit(this.totalPoints['percentage']);
 
@@ -463,14 +467,13 @@ export class ContaminantService {
     console.log(selectClusters);
     let ans = kmeans(this.totalPoints['percentage'], selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++' });
 
-    return await [output, ans['clusters']];
+    return [output, ans['clusters']];
     // ans
   }
 
   // performing the umap, kmeans (or dbscan) to generate cluster plot 1 data
-  async umapModel(selectClusters) {
-
-    await new Promise(resolve => setTimeout(resolve, 10));
+  umapModel(selectClusters) {
+    // await new Promise(resolve => setTimeout(resolve, 10));
 
     // let [output, dbclusters] = await this.dbClustering();
     // let ans = Array(this.totalPoints['percentage'].length).fill(0);
@@ -480,13 +483,9 @@ export class ContaminantService {
     //     ans[dbclusters[i][j]] = i;
     //   }
     // }
-
-    let [output, ans] = await this.kmeanClustering(selectClusters);
-
-    await new Promise(resolve => setTimeout(resolve, 100));
-
+    let [output, ans] = this.kmeanClustering(selectClusters);
+    // await new Promise(resolve => setTimeout(resolve, 100));
     var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
-
     for (let i = 0; i < selectClusters; i++) {
       this.clusterCounts[i] = {
         "cluster": i,
@@ -550,8 +549,6 @@ export class ContaminantService {
     this.heatMapScale = d3.scaleSequential(
         (d) => d3.interpolateYlGnBu(logScale(d))
       );
-
-    console.log(this.clusterCounts)
   }
   // update cluster plot 1 data according to the regression line
   async updateClustering(selectClusters) {
@@ -628,6 +625,7 @@ export class ContaminantService {
         (d) => d3.interpolateYlGnBu(logScale(d))
       );
   }
+
   // get the data of all samples, to be displayed in clusterplot 2
   sampleFindTotals(d: Taxon, rootReads: number[][]) {
     this.SamplePoints = {
@@ -671,7 +669,7 @@ sampleCountTotals(d: Taxon, rootReads: number[][]): void {
     this.sampleCountTotals(d.children[i], rootReads);
   }
 }
-  //generate cluster plot 2 data
+
   umapSampleModel(d: Taxon): void {
 
     let umapsampledata = this.SamplePoints['percentage'].concat([this.SamplePoints['ctrl_percentage']])

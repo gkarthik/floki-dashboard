@@ -58,19 +58,24 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   ngAfterViewInit() {
   }
   // creates scatter and cluster plot for the selected sample
-  realize() {
+  async realize() {
     this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
     this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, this.scoreThreshold);
-    this.umapModel(this.selectedSample).then(t => this.umapPlot());
+    let rootReads = this.taxonomyTreeService.getRootReads();
+    this.contaminantService.findTotals(this.jsonData, rootReads, this.selectedSample);
     this.contaminantService.prepareAnalysis(this.selectedSample, this.selectedTaxon); // Sets current points in service
-    this.updateplot()
-    this.contaminantService.trainAndPredict().then(
-      pred => {
-        this.updateplot(),
-        this.umapPlot(),
-        this.updateCluster(),
-        this.updateLine(pred)
-      });
+    this.updateplot();
+    // let t = await this.umapModel(this.selectedSample);
+    // this.umapPlot();
+    let pred = await this.contaminantService.trainAndPredict();
+    this.umapModel(this.selectedSample).then(t => this.umapPlot());
+    // [pred, t] = await Promise.all([this.contaminantService.trainAndPredict(), this.umapModel(this.selectedSample)])
+    // this.umapPlot();
+    this.updateplot();
+    this.updateLine(pred);
+    this.umapPlot();
+    this.updateCluster();
+
   }
 
   updateCluster() {
@@ -653,15 +658,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .y(function(d) { return yScale(d[1]); })
       .curve(d3.curveMonotoneX);
 
-    var confidenceArea = d3.area()
-      .x(function(d) { return xScale(d[0]); })
-      .y0(function(d) {
-        return yScale(d[1]);
-      })
-      .y1(function(d) {
-        return yScale(d[2]);
-      });
-
     svg.select("#contaminant_line")
       .datum(predictedVal)
       .attr("d", line)
@@ -701,11 +697,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .text("Background: " + pointCounts[0]);
   }
 
-  umapModel(selectedsample: string) {
-    let rootReads = this.taxonomyTreeService.getRootReads();
-    this.contaminantService.findTotals(this.jsonData, rootReads, selectedsample);
+  async umapModel(selectedsample: string) {
     let model = this.contaminantService.umapModel(this.selectClusters);
-    return model;
+    return await model;
   }
 
   umapPlot() {
@@ -845,7 +839,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
     circle.exit()
       .remove();
-
   }
 
   umapSamplePlot() {
