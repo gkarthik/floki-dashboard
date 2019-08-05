@@ -44,7 +44,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   onInit(_: Taxon): void {
     this.scoreThreshold = 1;
     this.selectedTaxon = "species";
-    this.selectClusters = 3;
+    this.selectClusters = 7;
     this.jsonData = _;
     this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
     this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, 1);
@@ -57,25 +57,54 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
   ngAfterViewInit() {
   }
+
   // creates scatter and cluster plot for the selected sample
   async realize() {
     this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
     this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, this.scoreThreshold);
     let rootReads = this.taxonomyTreeService.getRootReads();
-    this.contaminantService.findTotals(this.jsonData, rootReads, this.selectedSample);
-    this.contaminantService.prepareAnalysis(this.selectedSample, this.selectedTaxon); // Sets current points in service
-    this.updateplot();
+    // this.umapModel(this.selectedSample, rootReads).then(t => this.umapPlot());
+    this.contaminantService.prepareAnalysis(this.selectedSample, this.selectedTaxon, rootReads); // Sets current points in service
+    // this.updateplot();
     // let t = await this.umapModel(this.selectedSample);
     // this.umapPlot();
-    let pred = await this.contaminantService.trainAndPredict();
-    this.umapModel(this.selectedSample).then(t => this.umapPlot());
-    // [pred, t] = await Promise.all([this.contaminantService.trainAndPredict(), this.umapModel(this.selectedSample)])
-    // this.umapPlot();
+    // let pred = await this.contaminantService.trainAndPredict();
+    this.updateplot()
+
+    let [pred, t] = await Promise.all([this.regressionAnalysis(), this.umapModel(this.selectedSample, rootReads)])
     this.updateplot();
     this.updateLine(pred);
-    this.umapPlot();
     this.updateCluster();
+  }
 
+  async regressionAnalysis(){
+    let pred = this.contaminantService.trainAndPredict()
+    return await pred;
+  }
+
+  downloadCSV() {
+    let rootReads = this.taxonomyTreeService.getRootReads();
+    let current = this.contaminantService.getSampleData();
+    console.log(current);
+
+    let csv = "data:text/csv;charset=utf-8,";
+    let rootreads = []
+    rootreads.push("Name","Tax_ID",rootReads[1][0])
+    for (let i = 0; i < rootReads[0].length; i++) {
+      rootreads.push(rootReads[0][i])
+    }
+    csv += rootreads + "\n";
+    for (let i = 0;i < current.name.length; i++){
+      let row = []
+      row.push(current.name[i], current.tax_id[i], current.control[i])
+      for (let j = 0; j < current.all_samples[i].length; j++){
+        row.push(current.all_samples[i][j])
+      }
+      csv += row + "\n";
+    }
+
+    var encodedUri = encodeURI(csv);
+    window.open(encodedUri);
   }
 
   updateCluster() {
@@ -295,7 +324,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         .text("Contaminant:");
 
       svg.append("path")
-        .attr("d", d3.symbol().type(d3.symbolCross))
+        .attr("d", d3.symbol().type(d3.symbolTriangle))
         .style("fill", '#ffffff')
         .attr("transform",
           "translate(" + (150) + " ," + (this.canvas_height + 16) + ")")
@@ -323,7 +352,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         .attr("stroke-width", 3)
         .style("stroke", '#000000');
       svg.append("path")
-        .attr("d", d3.symbol().type(d3.symbolCross))
+        .attr("d", d3.symbol().type(d3.symbolTriangle))
         .style("fill", '#ffffff')
         .attr("transform",
           "translate(" + (180) + " ," + (this.canvas_height + 36) + ")")
@@ -697,9 +726,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .text("Background: " + pointCounts[0]);
   }
 
-  async umapModel(selectedsample: string) {
-    let model = this.contaminantService.umapModel(this.selectClusters);
-    return await model;
+  async umapModel(selectedsample: string, rootReads: number[][]) {
+    this.contaminantService.findTotals(this.jsonData, rootReads, selectedsample);
+    await this.contaminantService.umapModel(this.selectClusters).then(t=> this.umapPlot());
   }
 
   umapPlot() {
@@ -761,7 +790,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         } else if (d.node_pos == 1) {
           return d3.symbolSquare;
         } else {
-          return d3.symbolCross;
+          return d3.symbolTriangle;
         }
       }))
       .style("opacity", function(d) {
@@ -778,9 +807,9 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .on("mouseover", function(d) {
         d3.select(this).style("cursor", "pointer");
         if (d.pathogenic) {
-          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + d.control + "<br/>" + "Sample reads: " + d.sample + "<br/>" + "known pathogen");
+          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + d.control_prct + "<br/>" + "Sample reads: " + d.sample_prct + "<br/>" + "known pathogen");
         } else {
-          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + d.control + "<br/>" + "Sample reads: " + d.sample);
+          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + d.control_prct + "<br/>" + "Sample reads: " + d.sample_prct);
         }
       })
       .on("mousemove", function() { return tooltip.style("top", (d3.event.pageY - 10) + "px").style("left", (d3.event.pageX + 10) + "px"); })
@@ -806,7 +835,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         } else if (d.node_pos == 1) {
           return d3.symbolSquare;
         } else {
-          return d3.symbolCross;
+          return d3.symbolTriangle;
         }
       }))
       .style("opacity", function(d) {

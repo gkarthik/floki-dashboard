@@ -38,17 +38,19 @@ export class ContaminantService {
     "pathogenic": number,
     "tax_id": number
   }];
-  private totalPoints: [{ // dict of lists for clusterplot 1
+  private totalPoints: [{ // dict of lists for clusterplot 1, ctrl_prct and sample_prct are for display, while percentage is for UMAP and Kmeans
     "control": number,
     "sample": number[],
+    "ctrl_prct": number[],
+    "sample_prct": number[],
     "percentage": number[],
     "name": string,
     "pathogenic": number,
     "tax_id": number
   }];
   private plotTotalPoints: [{ // List of dict for d3 data() for clusterplot 1
-    "control": number,
-    "sample": number[],
+    "control_prct": number,
+    "sample_prct": number[],
     "percentage": number[],
     "name": string,
     "pathogenic": number,
@@ -79,6 +81,7 @@ export class ContaminantService {
   private sampleData: { // data parsed from the tree, for the scatter plot
     "control": number[],
     "sample": number[],
+    "all_samples": number[][],
     "name": string[],
     "node_pos": number[],
     "pathogenic": number[],
@@ -129,6 +132,18 @@ export class ContaminantService {
     let textColor = d3.hsl(bgColor).l > 0.5 ? "#000" : "#fff";
     return textColor;
   }
+  // return for csv download
+  getSampleData(): {
+    "control": number[],
+    "sample": number[],
+    "all_samples": number[][],
+    "name": string[],
+    "node_pos": number[],
+    "pathogenic": number[],
+    "tax_id": number[],
+  } {
+    return this.sampleData;
+  }
   // return points for scatterplot
   getCurrentPoints(): [{
     "control": number,
@@ -142,8 +157,8 @@ export class ContaminantService {
   }
   // return points for clusterplot 1
   getPlotTotalPoints(): [{
-    "control": number,
-    "sample": number[],
+    "control_prct": number,
+    "sample_prct": number[],
     "percentage": number[],
     "name": string,
     "pathogenic": number
@@ -198,19 +213,13 @@ export class ContaminantService {
   }
 
   // run find taxons and arrange points to prepare for training
-  prepareAnalysis(sample: string, taxon: string): [{
-    "control": number,
-    "sample": number,
-    "node_pos": number,
-    "name": string,
-    "pathogenic": number
-  }] {
+  prepareAnalysis(sample: string, taxon: string, rootReads: number[][]) {
     this.selectedSample = sample;
     this.selectedTaxon = taxon;
     let data = _.cloneDeep(this.jsonData);
     this.findTaxons(data);
     this.arrangePoints();
-    return this.currentPoints;
+    // return this.currentPoints;
   }
 
   // push up data from tree into the sample data, according to taxon level
@@ -218,6 +227,7 @@ export class ContaminantService {
     this.sampleData = {
       "control": [],
       "sample": [],
+      "all_samples": [],
       "name": [],
       "node_pos": [],
       "pathogenic": [],
@@ -227,10 +237,12 @@ export class ContaminantService {
   }
   searchTree(d: Taxon): void {
     let index = d.file.indexOf(this.selectedSample);
-    if (d.taxon_name != "Homo sapiens" && d.rank == this.selectedTaxon) {
+    // d.taxon_name != "Homo sapiens" &&
+    if (d.rank == this.selectedTaxon) {
       if (d.taxon_reads[index] > 0 || d.ctrl_taxon_reads > 0) {
         this.sampleData["control"].push(d.ctrl_taxon_reads);
         this.sampleData["sample"].push(d.taxon_reads[index]);
+        this.sampleData["all_samples"].push(d.taxon_reads);
         this.sampleData["name"].push(d.taxon_name);
         this.sampleData["pathogenic"].push(d.pathogenic);
         this.sampleData["tax_id"].push(d.tax_id);
@@ -265,25 +277,25 @@ export class ContaminantService {
       });
     };
     // find which points will be needed for the umap (based on the current points in scatterplot1)
-    for (let j = 0; j < this.plotTotalPoints.length; j++) {
-      this.plotTotalPoints[j].node_pos = 3;
-      for (let k = 0; k < this.currentPoints.length; k++) {
-        if (this.currentPoints[k].tax_id == this.plotTotalPoints[j].tax_id) {
-          this.plotTotalPoints[j].node_pos = 0;
-        }
-      }
-    }
+    // for (let j = 0; j < this.plotTotalPoints.length; j++) {
+    //   this.plotTotalPoints[j].node_pos = 3;
+    //   for (let k = 0; k < this.currentPoints.length; k++) {
+    //     if (this.currentPoints[k].tax_id == this.plotTotalPoints[j].tax_id) {
+    //       this.plotTotalPoints[j].node_pos = 0;
+    //     }
+    //   }
+    // }
   }
 
-  async optimization(ds, optimizer, model, loss){
-    await ds.forEachAsync(({ x, y }) => {
-      optimizer.minimize(() => {
-        const predYs = model(x);
-        const l = loss(y, predYs);
-        return l;
-      });
-    });
-  }
+  // async optimization(ds, optimizer, model, loss){
+  //   await ds.forEachAsync(({ x, y }) => {
+  //     optimizer.minimize(() => {
+  //       const predYs = model(x);
+  //       const l = loss(y, predYs);
+  //       return l;
+  //     });
+  //   });
+  // }
   // train the regression and then predict points, determining which points are above or below
   async trainAndPredict() {
 
@@ -299,9 +311,20 @@ export class ContaminantService {
     const model = x => m.mul(x).add(c);
     const loss = (pred, label) => pred.sub(label).square().mean();
 
+    // for (let epoch = 0; epoch < 100; epoch++) {
+    //   await new Promise(resolve => setTimeout(resolve, 4));
+    //   await this.optimization(ds, optimizer, model, loss);
+    // }
+
     for (let epoch = 0; epoch < 100; epoch++) {
-      await new Promise(resolve => setTimeout(resolve, 4));
-      await this.optimization(ds, optimizer, model, loss);
+      await new Promise(resolve => setTimeout(resolve, 1));
+      await ds.forEachAsync(({ x, y }) => {
+        optimizer.minimize(() => {
+          const predYs = model(x);
+          const l = loss(y, predYs);
+          return l;
+        });
+      });
     }
 
     // Compute confidence intervals on slope and intercept
@@ -370,6 +393,8 @@ export class ContaminantService {
     this.totalPoints = {
       "control": [],
       "sample": [],
+      "ctrl_prct": [],
+      "sample_prct": [],
       "percentage": [],
       "name": [],
       "pathogenic": [],
@@ -387,8 +412,8 @@ export class ContaminantService {
       "color": number
     }]
     this.plotTotalPoints = Array() as [{
-      "control": number,
-      "sample": number[],
+      "control_prct": number,
+      "sample_prct": number[],
       "percentage": number[],
       "name": string,
       "pathogenic": number,
@@ -403,9 +428,12 @@ export class ContaminantService {
   // get the data of all taxa which are to be displayed in clusterplot 1
   countTotals(d: Taxon, rootReads: number[][], selectedsample: string): void {
     let index = d.file.indexOf(selectedsample);
-    if (d.taxon_name != "Homo sapiens" && d.rank == "species" && (d.taxon_reads[index] > 0 || d.ctrl_taxon_reads > 0)) {
+    // d.taxon_name != "Homo sapiens" &&
+    if (d.rank == "species" && (d.taxon_reads[index] > 0 || d.ctrl_taxon_reads > 0)) {
       this.totalPoints["control"].push(d.ctrl_taxon_reads);
       this.totalPoints["sample"].push(d.taxon_reads);
+      this.totalPoints["ctrl_prct"].push(Math.round(1000*100*d.ctrl_taxon_reads / rootReads[1][0])/1000);
+      this.totalPoints["sample_prct"].push(d.taxon_reads.map(function(n, i) { return (Math.round(1000*100 * n / rootReads[0][i])/1000) ;}));
       let percentarray = []
       percentarray.push(100 * d.ctrl_taxon_reads / rootReads[1][0])
       this.totalPoints["percentage"].push(d.taxon_reads.map(function(n, i) { return (100 * n / rootReads[0][i]); }).concat(percentarray));
@@ -418,7 +446,6 @@ export class ContaminantService {
       this.countTotals(d.children[i], rootReads, selectedsample);
     }
   }
-
 
   // async dbClustering() {
   //   let umap = new UMAP({ minDist: 1});
@@ -458,22 +485,23 @@ export class ContaminantService {
     return manhattan
   }
 
-  kmeanClustering(selectClusters) {
+  async kmeanClustering(selectClusters) {
     let umap = new UMAP({distanceFn:this.manhattan, minDist: 1, nNeighbors:15, spread:10});
-    let output = umap.fit(this.totalPoints['percentage']);
+    // let output = umap.fit(this.totalPoints['percentage']);
 
     // let dbscan = new clustering.DBSCAN();
     // let dbclusters = dbscan.run(this.totalPoints['percentage'], 1, 1);
-    console.log(selectClusters);
-    let ans = kmeans(this.totalPoints['percentage'], selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++' });
+    // console.log(selectClusters);
+    // let ans = kmeans(this.totalPoints['percentage'], selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++' });
 
+    let [output, ans] = await Promise.all([umap.fit(this.totalPoints['percentage']), kmeans(this.totalPoints['percentage'], selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'})]);
     return [output, ans['clusters']];
     // ans
   }
 
   // performing the umap, kmeans (or dbscan) to generate cluster plot 1 data
-  umapModel(selectClusters) {
-    // await new Promise(resolve => setTimeout(resolve, 10));
+  async umapModel(selectClusters) {
+    await new Promise(resolve => setTimeout(resolve, 4));
 
     // let [output, dbclusters] = await this.dbClustering();
     // let ans = Array(this.totalPoints['percentage'].length).fill(0);
@@ -483,7 +511,7 @@ export class ContaminantService {
     //     ans[dbclusters[i][j]] = i;
     //   }
     // }
-    let [output, ans] = this.kmeanClustering(selectClusters);
+    let [output, ans] = await this.kmeanClustering(selectClusters);
     // await new Promise(resolve => setTimeout(resolve, 100));
     var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
     for (let i = 0; i < selectClusters; i++) {
@@ -502,8 +530,8 @@ export class ContaminantService {
 
     for (let i = 0; i < output.length; i++) {
       this.plotTotalPoints.push({
-        "control": this.totalPoints['control'][i],
-        "sample": this.totalPoints['sample'][i],
+        "control_prct": this.totalPoints['ctrl_prct'][i],
+        "sample_prct": this.totalPoints['sample_prct'][i],
         "percentage": this.totalPoints['percentage'][i],
         "name": this.totalPoints['name'][i],
         "pathogenic": this.totalPoints['pathogenic'][i],
@@ -654,7 +682,8 @@ export class ContaminantService {
 // counting for the sample comparison umap:
 sampleCountTotals(d: Taxon, rootReads: number[][]): void {
   // setting .som >100 increases consistency of plot
-  if (d.rank == "species" && d.taxon_name != "Homo sapiens" && d.taxon_reads.some(x => x > 1)) {
+   // && d.taxon_name != "Homo sapiens"
+  if (d.rank == "species" && d.taxon_reads.some(x => x > 1)) {
     this.SamplePoints["control"].push(d.ctrl_taxon_reads);
     this.SamplePoints["name"].push(d.taxon_name);
     this.SamplePoints["pathogenic"].push(d.pathogenic);
