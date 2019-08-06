@@ -727,7 +727,6 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   }
 
   async umapModel(selectedsample: string, rootReads: number[][]) {
-    this.contaminantService.findTotals(this.jsonData, rootReads, selectedsample);
     await this.contaminantService.umapModel(this.selectClusters).then(t=> this.umapPlot());
   }
 

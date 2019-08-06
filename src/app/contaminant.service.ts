@@ -38,16 +38,6 @@ export class ContaminantService {
     "pathogenic": number,
     "tax_id": number
   }];
-  private totalPoints: [{ // dict of lists for clusterplot 1, ctrl_prct and sample_prct are for display, while percentage is for UMAP and Kmeans
-    "control": number,
-    "sample": number[],
-    "ctrl_prct": number[],
-    "sample_prct": number[],
-    "percentage": number[],
-    "name": string,
-    "pathogenic": number,
-    "tax_id": number
-  }];
   private plotTotalPoints: [{ // List of dict for d3 data() for clusterplot 1
     "control_prct": number,
     "sample_prct": number[],
@@ -82,6 +72,9 @@ export class ContaminantService {
     "control": number[],
     "sample": number[],
     "all_samples": number[][],
+    "ctrl_prct": number[],
+    "sample_prct": number[][],
+    "percentage": number[][],
     "name": string[],
     "node_pos": number[],
     "pathogenic": number[],
@@ -137,6 +130,9 @@ export class ContaminantService {
     "control": number[],
     "sample": number[],
     "all_samples": number[][],
+    "ctrl_prct": number[][],
+    "sample_prct": number[][],
+    "percentage": number[][],
     "name": string[],
     "node_pos": number[],
     "pathogenic": number[],
@@ -217,39 +213,69 @@ export class ContaminantService {
     this.selectedSample = sample;
     this.selectedTaxon = taxon;
     let data = _.cloneDeep(this.jsonData);
-    this.findTaxons(data);
+    this.findTaxons(data, rootReads);
     this.arrangePoints();
     // return this.currentPoints;
   }
 
   // push up data from tree into the sample data, according to taxon level
-  findTaxons(d: Taxon) {
+  findTaxons(d: Taxon, rootReads: number[][]) {
     this.sampleData = {
       "control": [],
       "sample": [],
       "all_samples": [],
+      "ctrl_prct": [],
+      "sample_prct": [],
+      "percentage": [],
       "name": [],
       "node_pos": [],
       "pathogenic": [],
       "tax_id": []
     };
-    this.searchTree(d);
+    this.clusterCounts = Array() as [{
+      "cluster": number,
+      "taxa": number,
+      "significant": number,
+      "contaminant": number,
+      "background": number,
+      "avg_ctrl_percentage": number,
+      "avg_sample_percentage": number[],
+      "avg_sample_percent_string": string[],
+      "color": number
+    }]
+    this.plotTotalPoints = Array() as [{
+      "control_prct": number,
+      "sample_prct": number[],
+      "percentage": number[],
+      "name": string,
+      "pathogenic": number,
+      "umapX": number,
+      "umapY": number,
+      "node_pos": number,
+      "tax_id": number,
+      "clusters": number
+    }];
+    this.searchTree(d, rootReads);
   }
-  searchTree(d: Taxon): void {
+
+  searchTree(d: Taxon, rootReads: number[][]): void {
     let index = d.file.indexOf(this.selectedSample);
     // d.taxon_name != "Homo sapiens" &&
-    if (d.rank == this.selectedTaxon) {
-      if (d.taxon_reads[index] > 0 || d.ctrl_taxon_reads > 0) {
+    if (d.rank == this.selectedTaxon && (d.taxon_reads[index] > 0 || d.ctrl_taxon_reads > 0)) {
         this.sampleData["control"].push(d.ctrl_taxon_reads);
         this.sampleData["sample"].push(d.taxon_reads[index]);
         this.sampleData["all_samples"].push(d.taxon_reads);
         this.sampleData["name"].push(d.taxon_name);
         this.sampleData["pathogenic"].push(d.pathogenic);
         this.sampleData["tax_id"].push(d.tax_id);
-      }
+        this.sampleData["ctrl_prct"].push(Math.round(1000*100*d.ctrl_taxon_reads / rootReads[1][0])/1000);
+        this.sampleData["sample_prct"].push(d.taxon_reads.map(function(n, i) { return (Math.round(1000*100 * n / rootReads[0][i])/1000) ;}));
+        let percentarray = []
+        percentarray.push(100 * d.ctrl_taxon_reads / rootReads[1][0])
+        this.sampleData["percentage"].push(d.taxon_reads.map(function(n, i) { return (100 * n / rootReads[0][i]); }).concat(percentarray));
     }
     for (let i = 0; i < d.children.length; i++) {
-      this.searchTree(d.children[i]);
+      this.searchTree(d.children[i], rootReads);
     }
   }
   // take the sample data and place it in training and currentPoints (to plot in scatterplot1)
@@ -388,65 +414,6 @@ export class ContaminantService {
     return [predictions, confBand];
   }
 
-  //  push into lists in dictionaries, in preperation for comparing data of all samples in clussterplot 1
-  findTotals(d: Taxon, rootReads: number[][], selectedsample: string) {
-    this.totalPoints = {
-      "control": [],
-      "sample": [],
-      "ctrl_prct": [],
-      "sample_prct": [],
-      "percentage": [],
-      "name": [],
-      "pathogenic": [],
-      "tax_id": []
-    }
-    this.clusterCounts = Array() as [{
-      "cluster": number,
-      "taxa": number,
-      "significant": number,
-      "contaminant": number,
-      "background": number,
-      "avg_ctrl_percentage": number,
-      "avg_sample_percentage": number[],
-      "avg_sample_percent_string": string[],
-      "color": number
-    }]
-    this.plotTotalPoints = Array() as [{
-      "control_prct": number,
-      "sample_prct": number[],
-      "percentage": number[],
-      "name": string,
-      "pathogenic": number,
-      "umapX": number,
-      "umapY": number,
-      "node_pos": number,
-      "tax_id": number,
-      "clusters": number
-    }];
-    this.countTotals(d, rootReads, selectedsample);
-  }
-  // get the data of all taxa which are to be displayed in clusterplot 1
-  countTotals(d: Taxon, rootReads: number[][], selectedsample: string): void {
-    let index = d.file.indexOf(selectedsample);
-    // d.taxon_name != "Homo sapiens" &&
-    if (d.rank == "species" && (d.taxon_reads[index] > 0 || d.ctrl_taxon_reads > 0)) {
-      this.totalPoints["control"].push(d.ctrl_taxon_reads);
-      this.totalPoints["sample"].push(d.taxon_reads);
-      this.totalPoints["ctrl_prct"].push(Math.round(1000*100*d.ctrl_taxon_reads / rootReads[1][0])/1000);
-      this.totalPoints["sample_prct"].push(d.taxon_reads.map(function(n, i) { return (Math.round(1000*100 * n / rootReads[0][i])/1000) ;}));
-      let percentarray = []
-      percentarray.push(100 * d.ctrl_taxon_reads / rootReads[1][0])
-      this.totalPoints["percentage"].push(d.taxon_reads.map(function(n, i) { return (100 * n / rootReads[0][i]); }).concat(percentarray));
-      this.totalPoints["name"].push(d.taxon_name);
-      this.totalPoints["pathogenic"].push(d.pathogenic);
-      this.totalPoints["tax_id"].push(d.tax_id);
-    }
-
-    for (let i = 0; i < d.children.length; i++) {
-      this.countTotals(d.children[i], rootReads, selectedsample);
-    }
-  }
-
   // async dbClustering() {
   //   let umap = new UMAP({ minDist: 1});
   //   let output = umap.fit(this.totalPoints['percentage']);
@@ -494,7 +461,7 @@ export class ContaminantService {
     // console.log(selectClusters);
     // let ans = kmeans(this.totalPoints['percentage'], selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++' });
 
-    let [output, ans] = await Promise.all([umap.fit(this.totalPoints['percentage']), kmeans(this.totalPoints['percentage'], selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'})]);
+    let [output, ans] = await Promise.all([umap.fit(this.sampleData['percentage']), kmeans(this.sampleData['percentage'], selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'})]);
     return [output, ans['clusters']];
     // ans
   }
@@ -522,28 +489,28 @@ export class ContaminantService {
         "contaminant": 0,
         "background": 0,
         "avg_ctrl_percentage": 0,
-        "avg_sample_percentage": Array(this.totalPoints['sample'][0].length).fill(0),
-        "avg_sample_percent_string": Array(this.totalPoints['sample'][0].length),
+        "avg_sample_percentage": Array(this.sampleData['sample_prct'][0].length).fill(0),
+        "avg_sample_percent_string": Array(this.sampleData['sample_prct'][0].length),
         "color": colorScale(i)
       }
     }
 
     for (let i = 0; i < output.length; i++) {
       this.plotTotalPoints.push({
-        "control_prct": this.totalPoints['ctrl_prct'][i],
-        "sample_prct": this.totalPoints['sample_prct'][i],
-        "percentage": this.totalPoints['percentage'][i],
-        "name": this.totalPoints['name'][i],
-        "pathogenic": this.totalPoints['pathogenic'][i],
+        "control_prct": this.sampleData['ctrl_prct'][i],
+        "sample_prct": this.sampleData['sample_prct'][i],
+        "percentage": this.sampleData['percentage'][i],
+        "name": this.sampleData['name'][i],
+        "pathogenic": this.sampleData['pathogenic'][i],
         "umapX": output[i][0],
         "umapY": output[i][1],
         "node_pos": 3,
         "clusters": ans[i],
-        "tax_id": this.totalPoints['tax_id'][i]
+        "tax_id": this.sampleData['tax_id'][i]
       });
-      let samplepercents = this.totalPoints['percentage'][i]
+      let samplepercents = this.sampleData['percentage'][i]
       this.clusterCounts[ans[i]]['taxa'] += 1;
-      this.clusterCounts[ans[i]]['avg_ctrl_percentage'] += this.totalPoints['percentage'][i][this.totalPoints['percentage'][i].length-1];
+      this.clusterCounts[ans[i]]['avg_ctrl_percentage'] += this.sampleData['percentage'][i][this.sampleData['percentage'][i].length-1];
       this.clusterCounts[ans[i]]['avg_sample_percentage'] = this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j) => a + samplepercents[j]);
     }
 
@@ -578,6 +545,7 @@ export class ContaminantService {
         (d) => d3.interpolateYlGnBu(logScale(d))
       );
   }
+
   // update cluster plot 1 data according to the regression line
   async updateClustering(selectClusters) {
   this.clusterCounts = Array() as[{
@@ -592,7 +560,7 @@ export class ContaminantService {
     "color": number
   }]
 
-  let ans = kmeans(this.totalPoints['percentage'], selectClusters, {seed: 1234567891234, initialization: 'kmeans++'});
+  let ans = kmeans(this.sampleData['percentage'], selectClusters, {seed: 1234567891234, initialization: 'kmeans++'});
   ans = ans['clusters']
 
   var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
@@ -605,16 +573,14 @@ export class ContaminantService {
       "contaminant": 0,
       "background": 0,
       "avg_ctrl_percentage": 0,
-      "avg_sample_percentage": Array(this.totalPoints['sample'][0].length).fill(0),
-      "avg_sample_percent_string":  Array(this.totalPoints['sample'][0].length),
+      "avg_sample_percentage": Array(this.sampleData['percentage'][0].length).fill(0),
+      "avg_sample_percent_string":  Array(this.sampleData['percentage'][0].length),
       "color": colorScale(i)
     }
   }
 
   for (let i = 0; i<this.plotTotalPoints.length; i++){
     this.plotTotalPoints[i]["clusters"]=ans[i]
-    // let samplepercents = this.totalPoints['percentage'][i]
-    console.log(this.totalPoints['percentage'][i])
     if(this.currentPoints[i]['node_pos']==2){
       this.clusterCounts[ans[i]]['significant'] += 1;
     }else if (this.currentPoints[i]['node_pos']==1){
@@ -623,8 +589,8 @@ export class ContaminantService {
       this.clusterCounts[ans[i]]['background'] += 1;
     }
     this.clusterCounts[ans[i]]['taxa']+=1;
-    this.clusterCounts[ans[i]]['avg_ctrl_percentage']+=this.totalPoints['percentage'][i][this.totalPoints['percentage'][i].length-1];
-    this.clusterCounts[ans[i]]['avg_sample_percentage']=this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j)=> a+this.totalPoints['percentage'][i][j]);
+    this.clusterCounts[ans[i]]['avg_ctrl_percentage']+=this.sampleData['percentage'][i][this.sampleData['percentage'][i].length-1];
+    this.clusterCounts[ans[i]]['avg_sample_percentage']=this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j)=> a+this.sampleData['percentage'][i][j]);
   }
 
   for (let i = 0; i < selectClusters; i++){
