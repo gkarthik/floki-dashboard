@@ -30,6 +30,7 @@ export class ContaminantService {
   private rootReads: number[][];
   private heatMapScale = null;
   private confInt: Float32Array[][];
+  private fileNames: string[];
   private currentPoints: [{	// List of dict for d3 data() for scatterplot
     "control": number,
     "sample": number,
@@ -109,6 +110,10 @@ export class ContaminantService {
     };
   }
 
+  getFileNames(){
+    return this.fileNames;
+  }
+
   getHeatMapColor(x){
     if(this.heatMapScale == null){
       return "#FFFFF";
@@ -130,7 +135,7 @@ export class ContaminantService {
     "control": number[],
     "sample": number[],
     "all_samples": number[][],
-    "ctrl_prct": number[][],
+    "ctrl_prct": number[],
     "sample_prct": number[][],
     "percentage": number[][],
     "name": string[],
@@ -255,6 +260,7 @@ export class ContaminantService {
       "tax_id": number,
       "clusters": number
     }];
+    this.fileNames = d.file;
     this.searchTree(d, rootReads);
   }
 
@@ -268,8 +274,8 @@ export class ContaminantService {
         this.sampleData["name"].push(d.taxon_name);
         this.sampleData["pathogenic"].push(d.pathogenic);
         this.sampleData["tax_id"].push(d.tax_id);
-        this.sampleData["ctrl_prct"].push(Math.round(1000*100*d.ctrl_taxon_reads / rootReads[1][0])/1000);
-        this.sampleData["sample_prct"].push(d.taxon_reads.map(function(n, i) { return (Math.round(1000*100 * n / rootReads[0][i])/1000) ;}));
+        this.sampleData["ctrl_prct"].push(Math.round(10000*100*d.ctrl_taxon_reads / rootReads[1][0])/10000);
+        this.sampleData["sample_prct"].push(d.taxon_reads.map(function(n, i) { return (Math.round(10000*100 * n / rootReads[0][i])/10000) ;}));
         let percentarray = []
         percentarray.push(100 * d.ctrl_taxon_reads / rootReads[1][0])
         this.sampleData["percentage"].push(d.taxon_reads.map(function(n, i) { return (100 * n / rootReads[0][i]); }).concat(percentarray));
@@ -365,7 +371,7 @@ export class ContaminantService {
     let seM = mse.div(ssX).sqrt();
     let seC = mse.mul(tf.add(tf.scalar(1).div(n), tf.sum(tf.square(meanX)).div(ssX))).sqrt();
     let confInt = [[Math.round(m.dataSync()*1000)/1000, Math.round(m.sub(seM.mul(1.96)).dataSync()*1000)/1000, Math.round(m.add(seM.mul(1.96)).dataSync()*1000)/1000], [Math.round(1000*c.dataSync())/1000, Math.round(1000*c.sub(seC.mul(1.96)).dataSync())/1000, Math.round(1000*c.add(seC.mul(1.96)).dataSync())/1000]];
-    console.log(confInt);	// First element is confint on slope. Second element is confint on intercept
+    // First element is confint on slope. Second element is confint on intercept
     this.confInt = confInt;
     // Compute confidence band
     let fitPred = Array.from(tf.stack([trueX, predY], 1).dataSync());
@@ -452,23 +458,9 @@ export class ContaminantService {
     return manhattan
   }
 
-  async kmeanClustering(selectClusters) {
-    let umap = new UMAP({distanceFn:this.manhattan, minDist: 1, nNeighbors:15, spread:10});
-    // let output = umap.fit(this.totalPoints['percentage']);
-
-    // let dbscan = new clustering.DBSCAN();
-    // let dbclusters = dbscan.run(this.totalPoints['percentage'], 1, 1);
-    // console.log(selectClusters);
-    // let ans = kmeans(this.totalPoints['percentage'], selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++' });
-
-    let [output, ans] = await Promise.all([umap.fit(this.sampleData['percentage']), kmeans(this.sampleData['percentage'], selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'})]);
-    return [output, ans['clusters']];
-    // ans
-  }
-
   // performing the umap, kmeans (or dbscan) to generate cluster plot 1 data
   async umapModel(selectClusters) {
-    await new Promise(resolve => setTimeout(resolve, 4));
+    await new Promise(resolve => setTimeout(resolve, 3));
 
     // let [output, dbclusters] = await this.dbClustering();
     // let ans = Array(this.totalPoints['percentage'].length).fill(0);
@@ -478,7 +470,11 @@ export class ContaminantService {
     //     ans[dbclusters[i][j]] = i;
     //   }
     // }
-    let [output, ans] = await this.kmeanClustering(selectClusters);
+    // let [output, ans] = await this.kmeanClustering(selectClusters);
+
+    let umap = new UMAP({distanceFn:this.manhattan, minDist: 1, nNeighbors:15, spread:10});
+    let [output, ans] = await Promise.all([umap.fit(this.sampleData['percentage']), kmeans(this.sampleData['percentage'], selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'})]);
+    ans = ans['clusters']
     // await new Promise(resolve => setTimeout(resolve, 100));
     var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
     for (let i = 0; i < selectClusters; i++) {
@@ -517,7 +513,6 @@ export class ContaminantService {
     for (let i = 0; i < selectClusters; i++) {
       this.clusterCounts[i]['avg_ctrl_percentage'] = this.clusterCounts[i]['avg_ctrl_percentage'] / this.clusterCounts[i]['taxa'];
       for (let j = 0; j < this.clusterCounts[i]['avg_sample_percentage'].length; j++) {
-        console.log(this.clusterCounts[i]['avg_sample_percentage'][j] / this.clusterCounts[i]['taxa']);
         if ((this.clusterCounts[i]['avg_sample_percentage'][j] / this.clusterCounts[i]['taxa']) >= 0.001 || (this.clusterCounts[i]['avg_sample_percentage'][j] / this.clusterCounts[i]['taxa']) == 0) {
           this.clusterCounts[i]["avg_sample_percent_string"][j] = String(Math.round((this.clusterCounts[i]['avg_sample_percentage'][j] / this.clusterCounts[i]['taxa']) * 1000) / 1000);
         } else {
@@ -538,7 +533,6 @@ export class ContaminantService {
       return m;
     });
 
-    console.log("Percentage"+minPercentage+" "+maxPercentage);
     let logScale = d3.scaleLog().base(1000)
       .domain([1+minPercentage, 1+maxPercentage])
     this.heatMapScale = d3.scaleSequential(
@@ -596,7 +590,6 @@ export class ContaminantService {
   for (let i = 0; i < selectClusters; i++){
     this.clusterCounts[i]['avg_ctrl_percentage']=this.clusterCounts[i]['avg_ctrl_percentage']/this.clusterCounts[i]['taxa'];
     for (let j = 0; j < this.clusterCounts[i]['avg_sample_percentage'].length; j++){
-      console.log(this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']);
       if((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])>= 0.001 || (this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']) == 0){
         this.clusterCounts[i]["avg_sample_percent_string"][j]= String(Math.round((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])*1000)/1000);
       }else {

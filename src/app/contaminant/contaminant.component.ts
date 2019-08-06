@@ -31,6 +31,8 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   private selectedTaxon: string;
   private scoreThreshold: number;
   private selectClusters: number;
+  private xScale: d3.AxisScale<number>;
+  private yScale: d3.AxisScale<number>;
 
   private padding: number = 50;
   private canvas_width: number = 800;
@@ -85,15 +87,25 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   downloadCSV() {
     let rootReads = this.taxonomyTreeService.getRootReads();
     let current = this.contaminantService.getSampleData();
-    console.log(current);
+    let fileNames = this.contaminantService.getFileNames();
 
     let csv = "data:text/csv;charset=utf-8,";
-    let rootreads = []
-    rootreads.push("Name","Tax_ID",rootReads[1][0])
+
+    let csvRow = []
+    csvRow.push(this.selectedSample,this.selectedTaxon,this.scoreThreshold)
+    csv += csvRow + "\n";
+    csvRow = []
+    csvRow.push("Name","Tax_ID",rootReads[1][0])
     for (let i = 0; i < rootReads[0].length; i++) {
-      rootreads.push(rootReads[0][i])
+      csvRow.push(rootReads[0][i])
     }
-    csv += rootreads + "\n";
+    csv += csvRow + "\n";
+    csvRow =[]
+    csvRow.push("","Labels:","control")
+    for (let i = 0; i < fileNames.length; i++) {
+      csvRow.push(fileNames[i])
+    }
+    csv += csvRow + "\n";
     for (let i = 0;i < current.name.length; i++){
       let row = []
       row.push(current.name[i], current.tax_id[i], current.control[i])
@@ -124,16 +136,19 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .attr("width", this.canvas_width)
       .attr("height", this.canvas_height);
 
-    let xScale = d3.scaleSymlog()
+    this.xScale = d3.scaleSymlog()
       .domain([0, this.init_reads])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    let yScale = d3.scaleSymlog()
+    let xScale = this.xScale;
+
+    this.yScale = d3.scaleSymlog()
       .domain([0, this.init_reads])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
 
+    let yScale = this.yScale;
 
     let xAxis = d3.axisBottom(xScale)
       .ticks(2);
@@ -457,19 +472,23 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
     var tooltip = d3.select(this.tooltipEl.nativeElement);
 
-    let xScale = d3.scaleSymlog()
+    this.xScale = d3.scaleSymlog()
       .domain([0, d3.max(current, function(d) {
         return d.control;
       })])
       .range([this.padding, this.canvas_width - this.padding * 2])
       .nice();
 
-    let yScale = d3.scaleSymlog()
+    let xScale = this.xScale;
+
+    this.yScale = d3.scaleSymlog()
       .domain([0, d3.max(current, function(d) {
         return d.sample;
       })])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
+
+    let yScale = this.yScale;
 
     var circle = svg.selectAll(".taxon")
       .data(current);
@@ -668,19 +687,16 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     upperVal = upperVal.sort(sortFunction);
     lowerVal = lowerVal.sort(sortFunction);
 
-    let xScale = d3.scaleSymlog()
-      .domain([0, d3.max(current, function(d) {
-        return d.control;
-      })])
-      .range([this.padding, this.canvas_width - this.padding * 2])
-      .nice();
+    let xScale = this.xScale;
 
-    let yScale = d3.scaleSymlog()
+    this.yScale = d3.scaleSymlog()
       .domain([0, d3.max(current, function(d) {
         return d.sample;
       })])
       .range([this.canvas_height - this.padding, this.padding])
       .nice();
+
+    let yScale = this.yScale;
 
     var line = d3.line()
       .x(function(d) { return xScale(d[0]); })

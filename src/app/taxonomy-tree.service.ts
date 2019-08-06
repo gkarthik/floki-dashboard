@@ -48,7 +48,6 @@ export class TaxonomyTreeService {
     return d;
   }
 
-
   cutScoresNode(d: Taxon, threshold: number) {
     let ctrlscorearray = null;
     ctrlscorearray = d.ctrl_forward_score_distribution.split(",");
