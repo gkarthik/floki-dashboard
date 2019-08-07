@@ -7,7 +7,7 @@ import * as _ from "lodash";
 
 import * as jStat from 'jStat';
 import * as tf from '@tensorflow/tfjs';
-import umap from 'umap-js';
+// import umap from 'umap-js';
 
 import * as d3 from 'd3';
 
@@ -29,7 +29,7 @@ export class ContaminantService {
   private selectedTaxon: string;
   private rootReads: number[][];
   private heatMapScale = null;
-  private confInt: Float32Array[][];
+  private confInt: number[][];
   private fileNames: string[];
   private currentPoints: [{	// List of dict for d3 data() for scatterplot
     "control": number,

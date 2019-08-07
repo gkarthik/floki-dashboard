@@ -807,7 +807,16 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         } else {
           return d3.symbolTriangle;
         }
-      }))
+      }).size(function(d){
+        if (d.node_pos == 3 || d.node_pos == 2) {
+          return (150/(Math.log(plotPoints.length) / Math.log(20))).toString();
+        } else if (d.node_pos == 1) {
+          return (125/(Math.log(plotPoints.length) / Math.log(20))).toString();
+        } else {
+          return (100/(Math.log(plotPoints.length) / Math.log(20))).toString();
+        }
+        })
+      )
       .style("opacity", function(d) {
         if (d.node_pos == 3) {
           return 1;
@@ -844,15 +853,24 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       });
 
     circleEnter.merge(circle)
-      .attr("d", d3.symbol().type(function(d) {
-        if (d.node_pos == 3 || d.node_pos == 2) {
-          return d3.symbolCircle;
-        } else if (d.node_pos == 1) {
-          return d3.symbolSquare;
-        } else {
-          return d3.symbolTriangle;
-        }
-      }))
+    .attr("d", d3.symbol().type(function(d) {
+      if (d.node_pos == 3 || d.node_pos == 2) {
+        return d3.symbolCircle;
+      } else if (d.node_pos == 1) {
+        return d3.symbolSquare;
+      } else {
+        return d3.symbolTriangle;
+      }
+    }).size(function(d){
+      if (d.node_pos == 3 || d.node_pos == 2) {
+        return (150/(Math.log(plotPoints.length) / Math.log(20))).toString();
+      } else if (d.node_pos == 1) {
+        return (125/(Math.log(plotPoints.length) / Math.log(20))).toString();
+      } else {
+        return (100/(Math.log(plotPoints.length) / Math.log(20))).toString();
+      }
+      })
+    )
       .style("opacity", function(d) {
         if (d.node_pos == 3) {
           return 1;
