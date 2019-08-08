@@ -46,15 +46,19 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   onInit(_: Taxon): void {
     this.scoreThreshold = 1;
     this.selectedTaxon = "species";
-    this.selectClusters = 7;
+    this.selectClusters = 4;
     this.jsonData = _;
     this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
     this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, 1);
     let rootReads = this.taxonomyTreeService.getRootReads();
     this.initializePlot();
     this.contaminantService.sampleFindTotals(this.jsonData, rootReads);
-    this.contaminantService.umapSampleModel(this.jsonData);
-    this.umapSamplePlot();
+    if(this.jsonData.file.length>1){
+      this.contaminantService.umapSampleModel(this.jsonData);
+      this.umapSamplePlot();
+    }else {
+      this.sampleErrMessage();
+    }
   }
 
   ngAfterViewInit() {
@@ -94,14 +98,8 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     let csvRow = []
     csvRow.push(this.selectedSample,this.selectedTaxon,this.scoreThreshold)
     csv += csvRow + "\n";
-    csvRow = []
-    csvRow.push("Name","Tax_ID",rootReads[1][0])
-    for (let i = 0; i < rootReads[0].length; i++) {
-      csvRow.push(rootReads[0][i])
-    }
-    csv += csvRow + "\n";
     csvRow =[]
-    csvRow.push("","Labels:","control")
+    csvRow.push("Name","Tax_ID","control")
     for (let i = 0; i < fileNames.length; i++) {
       csvRow.push(fileNames[i])
     }
@@ -114,6 +112,12 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       }
       csv += row + "\n";
     }
+    csvRow = []
+    csvRow.push("Total","-1",rootReads[1][0])
+    for (let i = 0; i < rootReads[0].length; i++) {
+      csvRow.push(rootReads[0][i])
+    }
+    csv += csvRow + "\n";
 
     var encodedUri = encodeURI(csv);
     window.open(encodedUri);
@@ -270,12 +274,14 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .call(yAxis);
 
     svg.append("text")
+      .attr("id", "umaptitle")
       .attr("text-anchor", "middle")
       .attr("transform", "translate(" + (this.canvas_width / 2) + "," + 30 + ")")
       .style("font-size", "20px")
       .text("UMAP of Taxa in Selection");
 
     svg.append("text")
+      .attr("id", "umapXaxis")
       .attr("transform",
         "translate(" + (this.canvas_width / 2) + " ," + (this.canvas_height - 12) + ")")
       .style("text-anchor", "middle")
@@ -283,7 +289,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .text("UMAP 1");
 
     svg.append("text")
-      .attr("id", "ylabel")
+      .attr("id", "umapYaxis")
       .attr("text-anchor", "middle")
       .attr("x", - (this.canvas_height - this.padding) / 2)
       .attr("y", 14)
@@ -809,11 +815,11 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
         }
       }).size(function(d){
         if (d.node_pos == 3 || d.node_pos == 2) {
-          return (150/(Math.log(plotPoints.length) / Math.log(20))).toString();
+          return (150/(Math.log(plotPoints.length) / Math.log(10))).toString();
         } else if (d.node_pos == 1) {
-          return (125/(Math.log(plotPoints.length) / Math.log(20))).toString();
+          return (125/(Math.log(plotPoints.length) / Math.log(10))).toString();
         } else {
-          return (100/(Math.log(plotPoints.length) / Math.log(20))).toString();
+          return (100/(Math.log(plotPoints.length) / Math.log(10))).toString();
         }
         })
       )
@@ -863,11 +869,11 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       }
     }).size(function(d){
       if (d.node_pos == 3 || d.node_pos == 2) {
-        return (150/(Math.log(plotPoints.length) / Math.log(20))).toString();
+        return (150/(Math.log(plotPoints.length) / Math.log(10))).toString();
       } else if (d.node_pos == 1) {
-        return (125/(Math.log(plotPoints.length) / Math.log(20))).toString();
+        return (125/(Math.log(plotPoints.length) / Math.log(10))).toString();
       } else {
-        return (100/(Math.log(plotPoints.length) / Math.log(20))).toString();
+        return (100/(Math.log(plotPoints.length) / Math.log(10))).toString();
       }
       })
     )
@@ -901,6 +907,50 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
     circle.exit()
       .remove();
+
+    if(plotPoints[0]['percentage'].length <=2){
+      svg.select("#umaptitle")
+        .attr("text-anchor", "middle")
+        .attr("transform", "translate(" + (this.canvas_width / 2) + "," + 30 + ")")
+        .style("font-size", "20px")
+        .text("kmeans of taxa in selection");
+
+      svg.select("#umapXaxis")
+        .attr("transform",
+          "translate(" + (this.canvas_width / 2) + " ," + (this.canvas_height - 12) + ")")
+        .style("text-anchor", "middle")
+        .style("font-size", "20px")
+        .text("Log of control reads");
+
+      svg.select("#umapYaxis")
+        .attr("text-anchor", "middle")
+        .attr("x", - (this.canvas_height - this.padding) / 2)
+        .attr("y", 14)
+        .style("font-size", "20px")
+        .attr("transform", "rotate(-90)")
+        .text("Log of sample reads");
+    }else {
+      svg.select("#umaptitle")
+        .attr("text-anchor", "middle")
+        .attr("transform", "translate(" + (this.canvas_width / 2) + "," + 30 + ")")
+        .style("font-size", "20px")
+        .text("UMAP of Taxa in Selection");
+
+      svg.select("#umapXaxis")
+        .attr("transform",
+          "translate(" + (this.canvas_width / 2) + " ," + (this.canvas_height - 12) + ")")
+        .style("text-anchor", "middle")
+        .style("font-size", "20px")
+        .text("UMAP 1");
+
+      svg.select("#umapYaxis")
+        .attr("text-anchor", "middle")
+        .attr("x", - (this.canvas_height - this.padding) / 2)
+        .attr("y", 14)
+        .style("font-size", "20px")
+        .attr("transform", "rotate(-90)")
+        .text("UMAP 2");
+    }
   }
 
   umapSamplePlot() {
@@ -1019,5 +1069,17 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
     circle.exit()
       .remove();
+  }
+
+  sampleErrMessage() {
+    let svg = d3.select(this.svg3.nativeElement)
+      .attr("width", this.canvas_width)
+      .attr("height", this.canvas_height);
+
+    svg.select("#aboveline")
+      .attr("text-anchor", "middle")
+      .attr("transform", "translate(" + (this.canvas_width*0.5) + "," + 100 + ")")
+      .style("font-size", "30px")
+      .text("add more samples to compare");
   }
 }

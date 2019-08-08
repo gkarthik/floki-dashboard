@@ -133,7 +133,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     let _this = this;
     d3.selectAll("custom-node")
       .each(function(d: HierarchyPointNode<Taxon>) {
-        if (_this.checkWithinRadius([d.y, d.x], [_y, _x], _this.nodeSize + _this.strokeWidth)) {
+        if (_this.checkWithinRadius([d.y, d.x], [_y+5, _x], _this.nodeSize + _this.strokeWidth)) {
           if (d.data.tax_id != -1) // Avoid compressed nodes
             _this.drawCanvas(d.data.tax_id);
         }

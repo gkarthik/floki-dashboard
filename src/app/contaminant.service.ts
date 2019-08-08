@@ -198,7 +198,7 @@ export class ContaminantService {
   }] {
     return this.clusterCounts;
   }
-  getConfInt(): Float32Array[][] {
+  getConfInt(): number[][] {
     return this.confInt;
   }
   getConfLabels(): string[] {
@@ -268,6 +268,7 @@ export class ContaminantService {
     let index = d.file.indexOf(this.selectedSample);
     // d.taxon_name != "Homo sapiens" &&
     if (d.rank == this.selectedTaxon && (d.taxon_reads[index] > 0 || d.ctrl_taxon_reads > 0)) {
+    // if (d.rank == this.selectedTaxon && (d.taxon_reads.some(x=> x > 0))) {
         this.sampleData["control"].push(d.ctrl_taxon_reads);
         this.sampleData["sample"].push(d.taxon_reads[index]);
         this.sampleData["all_samples"].push(d.taxon_reads);
@@ -458,6 +459,15 @@ export class ContaminantService {
     return manhattan
   }
 
+  canberra(a, b) {
+  var ii = a.length;
+  var ans = 0;
+  for (var i = 0; i < ii; i++) {
+    ans += Math.abs(a[i] - b[i]) / (a[i] + b[i]);
+  }
+  return ans;
+}
+
   // performing the umap, kmeans (or dbscan) to generate cluster plot 1 data
   async umapModel(selectClusters) {
     await new Promise(resolve => setTimeout(resolve, 3));
@@ -472,9 +482,26 @@ export class ContaminantService {
     // }
     // let [output, ans] = await this.kmeanClustering(selectClusters);
 
-    let umap = new UMAP({distanceFn:this.manhattan, minDist: 1, nNeighbors:15, spread:10});
-    let [output, ans] = await Promise.all([umap.fit(this.sampleData['percentage']), kmeans(this.sampleData['percentage'], selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'})]);
-    ans = ans['clusters']
+    let trainingdata = []
+    for (let i = 0; i < this.sampleData['percentage'].length; i++) {
+      trainingdata.push(this.sampleData['percentage'][i].map((a, j) => Math.log(1000000*a + 1)));
+    }
+
+    if(trainingdata[0].length==2){
+      var ans = await kmeans(trainingdata, selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'});
+      ans = ans['clusters'];
+      trainingdata = []
+      for (let i = 0; i < this.sampleData['percentage'].length; i++) {
+        trainingdata.push([Math.log10(this.sampleData.control[i]+0.15*Math.random()),Math.log10(this.sampleData.sample[i]+0.15*Math.random())])
+      }
+      var output = trainingdata;
+    }else {
+      // this.sampleData['percentage']
+      let umap = new UMAP({distanceFn: this.manhattan, minDist: 1, nNeighbors:5, spread:1});
+      var [output, ans] = await Promise.all([umap.fit(trainingdata), kmeans(trainingdata, selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'})]);
+      ans = ans['clusters'];
+    }
+
     // await new Promise(resolve => setTimeout(resolve, 100));
     var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
     for (let i = 0; i < selectClusters; i++) {
@@ -498,8 +525,8 @@ export class ContaminantService {
         "percentage": this.sampleData['percentage'][i],
         "name": this.sampleData['name'][i],
         "pathogenic": this.sampleData['pathogenic'][i],
-        "umapX": output[i][0],
-        "umapY": output[i][1],
+        "umapX": output[i][1],
+        "umapY": output[i][0],
         "node_pos": 3,
         "clusters": ans[i],
         "tax_id": this.sampleData['tax_id'][i]
@@ -554,7 +581,12 @@ export class ContaminantService {
     "color": number
   }]
 
-  let ans = kmeans(this.sampleData['percentage'], selectClusters, {seed: 1234567891234, initialization: 'kmeans++'});
+  let trainingdata = []
+  for (let i = 0; i < this.sampleData['percentage'].length; i++) {
+    trainingdata.push(this.sampleData['percentage'][i].map((a, j) => Math.log(1000000*a+ 1)));
+  }
+// this.sampleData['percentage']
+  let ans = kmeans(trainingdata, selectClusters, {seed: 1234567891234, initialization: 'kmeans++'});
   ans = ans['clusters']
 
   var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
@@ -642,7 +674,7 @@ export class ContaminantService {
 sampleCountTotals(d: Taxon, rootReads: number[][]): void {
   // setting .som >100 increases consistency of plot
    // && d.taxon_name != "Homo sapiens"
-  if (d.rank == "species" && d.taxon_reads.some(x => x > 1)) {
+  if (d.rank == "species" && d.taxon_reads.some(x => x > 0)) {
     this.SamplePoints["control"].push(d.ctrl_taxon_reads);
     this.SamplePoints["name"].push(d.taxon_name);
     this.SamplePoints["pathogenic"].push(d.pathogenic);
@@ -662,7 +694,7 @@ sampleCountTotals(d: Taxon, rootReads: number[][]): void {
 
     let umapsampledata = this.SamplePoints['percentage'].concat([this.SamplePoints['ctrl_percentage']])
 
-    let umap = new UMAP({distanceFn: this.manhattan, minDist: 1, nNeighbors: 2 });
+    let umap = new UMAP({distanceFn: this.manhattan, minDist: 1, nNeighbors: 3 });
     let output = umap.fit(umapsampledata);
 
     let names = d.file.concat(['ctrl']);
@@ -677,7 +709,8 @@ sampleCountTotals(d: Taxon, rootReads: number[][]): void {
     //     ans[dbclusters[i][j]] = i;
     //   }
     // }
-    let ans = kmeans(umapsampledata, 4, {distance: this.manhattan, seed:123123456789, initialization: 'kmeans++'});
+
+    let ans = kmeans(umapsampledata, 1, {distance: this.manhattan, seed:123123456789, initialization: 'kmeans++'});
     ans['clusters']
 
     for (let i = 0; i < output.length; i++) {
