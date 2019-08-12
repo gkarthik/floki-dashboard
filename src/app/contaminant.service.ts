@@ -12,7 +12,11 @@ import * as tf from '@tensorflow/tfjs';
 import * as d3 from 'd3';
 
 import kmeans from 'ml-kmeans';
+var nn = require('nearest-neighbor');
 
+const louvain = require('louvain-algorithm');
+
+import KNN from 'ml-knn';
 import { UMAP } from 'umap-js';
 
 import clustering from 'density-clustering';
@@ -31,6 +35,7 @@ export class ContaminantService {
   private heatMapScale = null;
   private confInt: number[][];
   private fileNames: string[];
+  private clustNum: number;
   private currentPoints: [{	// List of dict for d3 data() for scatterplot
     "control": number,
     "sample": number,
@@ -481,30 +486,35 @@ export class ContaminantService {
     //   }
     // }
     // let [output, ans] = await this.kmeanClustering(selectClusters);
+    var ans = this.nearestNeighbours();
 
     let trainingdata = []
     for (let i = 0; i < this.sampleData['percentage'].length; i++) {
-      trainingdata.push(this.sampleData['percentage'][i].map((a, j) => Math.log(1000000*a + 1)));
+      trainingdata.push(_.cloneDeep(this.sampleData['percentage'][i]).map((a, j) => Math.log(1000000*a + 1)));
+      // trainingdata.push(_.cloneDeep(this.sampleData['percentage'][i]).map((a, j) => a));
     }
 
-    if(trainingdata[0].length==2){
-      var ans = await kmeans(trainingdata, selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'});
-      ans = ans['clusters'];
+    if(trainingdata[0].length<=2){
+      // var ans = await kmeans(trainingdata, selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'});
+      // ans = ans['clusters'];
       trainingdata = []
       for (let i = 0; i < this.sampleData['percentage'].length; i++) {
         trainingdata.push([Math.log10(this.sampleData.control[i]+0.15*Math.random()),Math.log10(this.sampleData.sample[i]+0.15*Math.random())])
       }
       var output = trainingdata;
     }else {
-      // this.sampleData['percentage']
-      let umap = new UMAP({distanceFn: this.manhattan, minDist: 1, nNeighbors:5, spread:1});
-      var [output, ans] = await Promise.all([umap.fit(trainingdata), kmeans(trainingdata, selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'})]);
-      ans = ans['clusters'];
+      let umap = new UMAP({distanceFn: this.cosine, minDist: 1, nNeighbors:15, spread:10});
+      var output = await umap.fit(trainingdata);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // var [output, ans] = await Promise.all([umap.fit(trainingdata), kmeans(trainingdata, selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'})]);
+      // ans = ans['clusters'];
+      // console.log(ans)
     }
 
     // await new Promise(resolve => setTimeout(resolve, 100));
     var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
-    for (let i = 0; i < selectClusters; i++) {
+    for (let i = 0; i < this.clustNum; i++) {
       this.clusterCounts[i] = {
         "cluster": i,
         "taxa": 0,
@@ -518,7 +528,7 @@ export class ContaminantService {
       }
     }
 
-    for (let i = 0; i < output.length; i++) {
+    for (let i = 0; i < this.sampleData["name"].length; i++) {
       this.plotTotalPoints.push({
         "control_prct": this.sampleData['ctrl_prct'][i],
         "sample_prct": this.sampleData['sample_prct'][i],
@@ -528,16 +538,16 @@ export class ContaminantService {
         "umapX": output[i][1],
         "umapY": output[i][0],
         "node_pos": 3,
-        "clusters": ans[i],
+        "clusters": ans[this.sampleData['name'][i]],
         "tax_id": this.sampleData['tax_id'][i]
       });
       let samplepercents = this.sampleData['percentage'][i]
-      this.clusterCounts[ans[i]]['taxa'] += 1;
-      this.clusterCounts[ans[i]]['avg_ctrl_percentage'] += this.sampleData['percentage'][i][this.sampleData['percentage'][i].length-1];
-      this.clusterCounts[ans[i]]['avg_sample_percentage'] = this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j) => a + samplepercents[j]);
+      this.clusterCounts[ans[this.sampleData['name'][i]]]['taxa'] += 1;
+      this.clusterCounts[ans[this.sampleData['name'][i]]]['avg_ctrl_percentage'] += this.sampleData['percentage'][i][this.sampleData['percentage'][i].length-1];
+      this.clusterCounts[ans[this.sampleData['name'][i]]]['avg_sample_percentage'] = this.clusterCounts[ans[this.sampleData['name'][i]]]['avg_sample_percentage'].map((a, j) => a + samplepercents[j]);
     }
 
-    for (let i = 0; i < selectClusters; i++) {
+    for (let i = 0; i < this.clustNum; i++) {
       this.clusterCounts[i]['avg_ctrl_percentage'] = this.clusterCounts[i]['avg_ctrl_percentage'] / this.clusterCounts[i]['taxa'];
       for (let j = 0; j < this.clusterCounts[i]['avg_sample_percentage'].length; j++) {
         if ((this.clusterCounts[i]['avg_sample_percentage'][j] / this.clusterCounts[i]['taxa']) >= 0.001 || (this.clusterCounts[i]['avg_sample_percentage'][j] / this.clusterCounts[i]['taxa']) == 0) {
@@ -581,17 +591,19 @@ export class ContaminantService {
     "color": number
   }]
 
-  let trainingdata = []
-  for (let i = 0; i < this.sampleData['percentage'].length; i++) {
-    trainingdata.push(this.sampleData['percentage'][i].map((a, j) => Math.log(1000000*a+ 1)));
-  }
-// this.sampleData['percentage']
-  let ans = kmeans(trainingdata, selectClusters, {seed: 1234567891234, initialization: 'kmeans++'});
-  ans = ans['clusters']
+  // let trainingdata = []
+  // for (let i = 0; i < this.sampleData['percentage'].length; i++) {
+  //   trainingdata.push(this.sampleData['percentage'][i].map((a, j) => Math.log(1000000*a + 1)));
+  // }
+  // this.sampleData['percentage']
+  // let ans = kmeans(trainingdata, selectClusters, {seed: 1234567891234, initialization: 'kmeans++'});
+  // ans = ans['clusters']
+  let ans = this.nearestNeighbours();
+
 
   var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
 
-  for (let i = 0; i < selectClusters; i++){
+  for (let i = 0; i < this.clustNum; i++){
     this.clusterCounts[i]={
       "cluster":i,
       "taxa": 0,
@@ -606,20 +618,20 @@ export class ContaminantService {
   }
 
   for (let i = 0; i<this.plotTotalPoints.length; i++){
-    this.plotTotalPoints[i]["clusters"]=ans[i]
+    this.plotTotalPoints[i]["clusters"]=ans[this.sampleData['name'][i]]
     if(this.currentPoints[i]['node_pos']==2){
-      this.clusterCounts[ans[i]]['significant'] += 1;
+      this.clusterCounts[ans[this.sampleData['name'][i]]]['significant'] += 1;
     }else if (this.currentPoints[i]['node_pos']==1){
-      this.clusterCounts[ans[i]]['contaminant'] += 1;
+      this.clusterCounts[ans[this.sampleData['name'][i]]]['contaminant'] += 1;
     }else {
-      this.clusterCounts[ans[i]]['background'] += 1;
+      this.clusterCounts[ans[this.sampleData['name'][i]]]['background'] += 1;
     }
-    this.clusterCounts[ans[i]]['taxa']+=1;
-    this.clusterCounts[ans[i]]['avg_ctrl_percentage']+=this.sampleData['percentage'][i][this.sampleData['percentage'][i].length-1];
-    this.clusterCounts[ans[i]]['avg_sample_percentage']=this.clusterCounts[ans[i]]['avg_sample_percentage'].map((a, j)=> a+this.sampleData['percentage'][i][j]);
+    this.clusterCounts[ans[this.sampleData['name'][i]]]['taxa']+=1;
+    this.clusterCounts[ans[this.sampleData['name'][i]]]['avg_ctrl_percentage']+=this.sampleData['percentage'][i][this.sampleData['percentage'][i].length-1];
+    this.clusterCounts[ans[this.sampleData['name'][i]]]['avg_sample_percentage']=this.clusterCounts[ans[this.sampleData['name'][i]]]['avg_sample_percentage'].map((a, j)=> a+this.sampleData['percentage'][i][j]);
   }
 
-  for (let i = 0; i < selectClusters; i++){
+  for (let i = 0; i < this.clustNum; i++){
     this.clusterCounts[i]['avg_ctrl_percentage']=this.clusterCounts[i]['avg_ctrl_percentage']/this.clusterCounts[i]['taxa'];
     for (let j = 0; j < this.clusterCounts[i]['avg_sample_percentage'].length; j++){
       if((this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa'])>= 0.001 || (this.clusterCounts[i]['avg_sample_percentage'][j]/this.clusterCounts[i]['taxa']) == 0){
@@ -670,25 +682,25 @@ export class ContaminantService {
     this.sampleCountTotals(d, rootReads);
   }
 
-// counting for the sample comparison umap:
-sampleCountTotals(d: Taxon, rootReads: number[][]): void {
-  // setting .som >100 increases consistency of plot
-   // && d.taxon_name != "Homo sapiens"
-  if (d.rank == "species" && d.taxon_reads.some(x => x > 0)) {
-    this.SamplePoints["control"].push(d.ctrl_taxon_reads);
-    this.SamplePoints["name"].push(d.taxon_name);
-    this.SamplePoints["pathogenic"].push(d.pathogenic);
-    this.SamplePoints["tax_id"].push(d.tax_id);
-    this.SamplePoints["ctrl_percentage"].push(100 * d.ctrl_taxon_reads / rootReads[1][0])
-    for (let i = 0; i < d.taxon_reads.length; i++) {
-      this.SamplePoints['percentage'][i].push(100 * d.taxon_reads[i] / rootReads[0][i]);
+  // counting for the sample comparison umap:
+  sampleCountTotals(d: Taxon, rootReads: number[][]): void {
+    // setting .som >100 increases consistency of plot
+     // && d.taxon_name != "Homo sapiens"
+    if (d.rank == "species" && d.taxon_reads.some(x => x > 0)) {
+      this.SamplePoints["control"].push(d.ctrl_taxon_reads);
+      this.SamplePoints["name"].push(d.taxon_name);
+      this.SamplePoints["pathogenic"].push(d.pathogenic);
+      this.SamplePoints["tax_id"].push(d.tax_id);
+      this.SamplePoints["ctrl_percentage"].push(100 * d.ctrl_taxon_reads / rootReads[1][0])
+      for (let i = 0; i < d.taxon_reads.length; i++) {
+        this.SamplePoints['percentage'][i].push(100 * d.taxon_reads[i] / rootReads[0][i]);
+      }
+    }
+
+    for (let i = 0; i < d.children.length; i++) {
+      this.sampleCountTotals(d.children[i], rootReads);
     }
   }
-
-  for (let i = 0; i < d.children.length; i++) {
-    this.sampleCountTotals(d.children[i], rootReads);
-  }
-}
 
   umapSampleModel(d: Taxon): void {
 
@@ -710,18 +722,84 @@ sampleCountTotals(d: Taxon, rootReads: number[][]): void {
     //   }
     // }
 
-    let ans = kmeans(umapsampledata, 1, {distance: this.manhattan, seed:123123456789, initialization: 'kmeans++'});
-    ans['clusters']
+    let ans = kmeans(umapsampledata, 4, {distance: this.manhattan, seed:123123456789, initialization: 'kmeans++'});
+    ans = ans['clusters']
 
     for (let i = 0; i < output.length; i++) {
       this.plotSamplePoints.push({
         "name": names[i],
-        "cluster": ans['clusters'][i],
+        "cluster": ans[i],
         "umapX": output[i][1],
         "umapY": output[i][0],
       });
     }
+  }
 
+  nearestNeighbours() {
+    let haystack = []
+    for (let i = 0; i<this.sampleData["name"].length; i++) {
+      haystack.push({"name": this.sampleData["name"][i], "percentage": this.sampleData["percentage"][i]});
+    }
+
+    nn.comparisonMethods.manhattan = function(a, b) {
+      var manhattan = 0
+      var dim = a.length
+      for (var i = 0; i < dim; i++) {
+        manhattan += Math.abs((b[i] || 0) - (a[i] || 0))
+      }
+      return manhattan;
+    }
+
+    nn.comparisonMethods.cosine = function(x, y) {
+      let result = 0.0;
+      let normX = 0.0;
+      let normY = 0.0;
+
+      for (let i = 0; i < x.length; i++) {
+        result += x[i] * y[i];
+        normX += x[i] ** 2;
+        normY += y[i] ** 2;
+      }
+
+      if (normX === 0 && normY === 0) {
+        return 0;
+      } else if (normX === 0 || normY === 0) {
+        return 1.0;
+      } else {
+        return 1.0 - result / Math.sqrt(normX * normY);
+      }
+    }
+
+    let fields = []
+    fields[0]={}
+    fields[0]["name"]="percentage";
+    fields[0]["measure"]=nn.comparisonMethods.cosine;
+
+    let edge_data = []
+    for (let i = 0; i< haystack.length; i++) {
+      let query = haystack[i]
+      nn.findMostSimilar(query, haystack, fields, function(nearestNeighbor, probability) {
+        edge_data.push({source: query["name"], target: nearestNeighbor["name"], weight: probability})
+      });
+    }
+    console.log(edge_data)
+
+    let samplenames = _.cloneDeep(this.sampleData["name"])
+
+    let community = louvain.jLouvain(samplenames, edge_data, 0.1);
+
+    let ans = community;
+    let counts = {}
+    for (let i = 0; i < this.sampleData['name'].length; i++){
+      counts[community[this.sampleData['name'][i]]]=0
+    }
+    for (let i = 0; i < this.sampleData['name'].length; i++){
+      counts[community[this.sampleData['name'][i]]]+=1
+    }
+
+    this.clustNum = Object.keys(counts).length;
+
+    return ans;
   }
 
 }

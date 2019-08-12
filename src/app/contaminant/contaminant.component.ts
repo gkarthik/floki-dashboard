@@ -70,13 +70,12 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
     this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, this.scoreThreshold);
     let rootReads = this.taxonomyTreeService.getRootReads();
     // this.umapModel(this.selectedSample, rootReads).then(t => this.umapPlot());
-    this.contaminantService.prepareAnalysis(this.selectedSample, this.selectedTaxon, rootReads); // Sets current points in service
+    await this.contaminantService.prepareAnalysis(this.selectedSample, this.selectedTaxon, rootReads); // Sets current points in service
     // this.updateplot();
     // let t = await this.umapModel(this.selectedSample);
     // this.umapPlot();
     // let pred = await this.contaminantService.trainAndPredict();
     this.updateplot()
-
     let [pred, t] = await Promise.all([this.regressionAnalysis(), this.umapModel(this.selectedSample, rootReads)])
     this.updateplot();
     this.updateLine(pred);
