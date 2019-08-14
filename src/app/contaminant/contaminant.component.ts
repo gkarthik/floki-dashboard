@@ -537,7 +537,7 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
       .on("mouseover", function(d) {
         d3.select(this).style("cursor", "pointer");
         if (d.pathogenic) {
-          return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " +Math.round(d.control) + "<br/>" + "Sample reads: " +Math.round(d.sample) + "<br/>" + "known pathogen");
+          return tooltip.style("visibility", "visible").style("border-bottom", "1px solid black").html(d.name + "<br/>" + "Control reads: " +Math.round(d.control) + "<br/>" + "Sample reads: " +Math.round(d.sample) + "<br/>" + "known pathogen");
         } else {
           return tooltip.style("visibility", "visible").html(d.name + "<br/>" + "Control reads: " + Math.round(d.control) + "<br/>" + "Sample reads: " + Math.round(d.sample));
         }

@@ -7,7 +7,6 @@ import * as _ from "lodash";
 
 import * as jStat from 'jStat';
 import * as tf from '@tensorflow/tfjs';
-// import umap from 'umap-js';
 
 import * as d3 from 'd3';
 
@@ -16,7 +15,6 @@ var nn = require('nearest-neighbor');
 
 const louvain = require('louvain-algorithm');
 
-import KNN from 'ml-knn';
 import { UMAP } from 'umap-js';
 
 import clustering from 'density-clustering';
@@ -486,23 +484,28 @@ export class ContaminantService {
     //   }
     // }
     // let [output, ans] = await this.kmeanClustering(selectClusters);
-    var ans = this.nearestNeighbours();
 
     let trainingdata = []
     for (let i = 0; i < this.sampleData['percentage'].length; i++) {
-      trainingdata.push(_.cloneDeep(this.sampleData['percentage'][i]).map((a, j) => Math.log(1000000*a + 1)));
-      // trainingdata.push(_.cloneDeep(this.sampleData['percentage'][i]).map((a, j) => a));
+      // trainingdata.push(_.cloneDeep(this.sampleData['percentage'][i]).map((a, j) => Math.log(1000000*a + 1)));
+      trainingdata.push(_.cloneDeep(this.sampleData['percentage'][i]).map((a, j) => a));
     }
 
     if(trainingdata[0].length<=2){
       // var ans = await kmeans(trainingdata, selectClusters, {distance: this.manhattan, seed: 1234567891234, initialization: 'kmeans++'});
       // ans = ans['clusters'];
+      // var ans = {}
+      var ans = this.nearestNeighbours();
+
       trainingdata = []
       for (let i = 0; i < this.sampleData['percentage'].length; i++) {
+        // ans[this.sampleData['name'][i]]= 0;
         trainingdata.push([Math.log10(this.sampleData.control[i]+0.15*Math.random()),Math.log10(this.sampleData.sample[i]+0.15*Math.random())])
       }
       var output = trainingdata;
     }else {
+      var ans = this.nearestNeighbours();
+
       let umap = new UMAP({distanceFn: this.cosine, minDist: 1, nNeighbors:15, spread:10});
       var output = await umap.fit(trainingdata);
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -599,7 +602,6 @@ export class ContaminantService {
   // let ans = kmeans(trainingdata, selectClusters, {seed: 1234567891234, initialization: 'kmeans++'});
   // ans = ans['clusters']
   let ans = this.nearestNeighbours();
-
 
   var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
 
@@ -735,60 +737,90 @@ export class ContaminantService {
     }
   }
 
+// louvain on nearest neighbor graph
   nearestNeighbours() {
     let haystack = []
     for (let i = 0; i<this.sampleData["name"].length; i++) {
       haystack.push({"name": this.sampleData["name"][i], "percentage": this.sampleData["percentage"][i]});
     }
 
-    nn.comparisonMethods.manhattan = function(a, b) {
-      var manhattan = 0
-      var dim = a.length
-      for (var i = 0; i < dim; i++) {
-        manhattan += Math.abs((b[i] || 0) - (a[i] || 0))
-      }
-      return manhattan;
-    }
-
-    nn.comparisonMethods.cosine = function(x, y) {
-      let result = 0.0;
-      let normX = 0.0;
-      let normY = 0.0;
-
-      for (let i = 0; i < x.length; i++) {
-        result += x[i] * y[i];
-        normX += x[i] ** 2;
-        normY += y[i] ** 2;
-      }
-
-      if (normX === 0 && normY === 0) {
-        return 0;
-      } else if (normX === 0 || normY === 0) {
-        return 1.0;
-      } else {
-        return 1.0 - result / Math.sqrt(normX * normY);
-      }
-    }
-
-    let fields = []
-    fields[0]={}
-    fields[0]["name"]="percentage";
-    fields[0]["measure"]=nn.comparisonMethods.cosine;
-
-    let edge_data = []
+    let k = 5;
+    let edge_data = [];
     for (let i = 0; i< haystack.length; i++) {
-      let query = haystack[i]
-      nn.findMostSimilar(query, haystack, fields, function(nearestNeighbor, probability) {
-        edge_data.push({source: query["name"], target: nearestNeighbor["name"], weight: probability})
+      let dist;
+      let distArr = [];
+      for (let j = 0; j< haystack.length; j++) {
+        dist = this.cosine(haystack[i]["percentage"], haystack[j]["percentage"]);
+        if(dist < 0){
+          dist = 0;
+        }
+        if(i != j){
+          distArr.push([dist,j])
+        }
+        // if (dist < minDist && i != j){
+        //   minDist = dist;
+        //   minPos = j;
+        // }
+        // let dist = this.manhattan(haystack[i]["percentage"], haystack[j]["percentage"]);
+      }
+      distArr.sort(function(a, b) {
+        return a[0]-b[0];
       });
+      for (let k = 0; k < 4; k++){
+        edge_data.push({source: haystack[i]["name"], target: haystack[distArr[k][1]]["name"], weight: distArr[k][0]})
+      }
+      // edge_data.push({source: haystack[i]["name"], target: haystack[minPos]["name"], weight: minDist})
     }
+
+    // nn.comparisonMethods.manhattan = function(a, b) {
+    //   var manhattan = 0
+    //   var dim = a.length
+    //   for (var i = 0; i < dim; i++) {
+    //     manhattan += Math.abs((b[i] || 0) - (a[i] || 0))
+    //   }
+    //   return manhattan;
+    // }
+    //
+    // nn.comparisonMethods.cosine = function(x, y) {
+    //   let result = 0.0;
+    //   let normX = 0.0;
+    //   let normY = 0.0;
+    //
+    //   for (let i = 0; i < x.length; i++) {
+    //     result += x[i] * y[i];
+    //     normX += x[i] ** 2;
+    //     normY += y[i] ** 2;
+    //   }
+    //
+    //   if (normX === 0 && normY === 0) {
+    //     return 0;
+    //   } else if (normX === 0 || normY === 0) {
+    //     return 1.0;
+    //   } else {
+    //     return 1.0 - result / Math.sqrt(normX * normY);
+    //   }
+    // }
+
+    // let fields = []
+    // fields[0]={}
+    // fields[0]["name"]="percentage";
+    // fields[0]["measure"]=nn.comparisonMethods.cosine;
+    //
+    // let edge_data = []
+    // for (let i = 0; i< haystack.length; i++) {
+    //   let query = haystack[i]
+    //   nn.findMostSimilar(query, haystack, fields, function(nearestNeighbor, probability) {
+    //     edge_data.push({source: query["name"], target: nearestNeighbor["name"], weight: probability})
+    //   });
+
     console.log(edge_data)
 
     let samplenames = _.cloneDeep(this.sampleData["name"])
 
-    let community = louvain.jLouvain(samplenames, edge_data, 0.1);
+    let community = louvain.jLouvain(samplenames, edge_data, 0.00000001);
 
     let ans = community;
+
     let counts = {}
     for (let i = 0; i < this.sampleData['name'].length; i++){
       counts[community[this.sampleData['name'][i]]]=0

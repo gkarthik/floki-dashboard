@@ -131,6 +131,11 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     let _y = event.clientX - this.canvasEl.getBoundingClientRect()["x"];
     let _x = event.clientY - this.canvasEl.getBoundingClientRect()["y"];
     let _this = this;
+    if(_this.checkWithinRadius([0, this.screenHeight/3], [_y, _x], 200)){
+      if (this.currentNode.parent != '-1'){
+        _this.drawCanvas(+this.currentNode.parent)
+      }
+    }
     d3.selectAll("custom-node")
       .each(function(d: HierarchyPointNode<Taxon>) {
         if (_this.checkWithinRadius([d.y, d.x], [_y+5, _x], _this.nodeSize + _this.strokeWidth)) {
@@ -376,6 +381,16 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     let _this = this;
     let tx: number, ty: number, sx: number, sy: number;
     this.cx.clearRect(0, 0, this.screenWidth * (2 / 3), this.screenHeight);
+
+    _this.cx.beginPath();
+    _this.cx.arc(0, this.screenHeight/5, 100, 0, 2 * Math.PI, false);
+    // _this.cx.fillStyle = 'gray';
+    _this.cx.fill();
+    // _this.cx.lineWidth = 5;
+    // _this.cx.strokeStyle = '#003300';
+    _this.cx.stroke();
+    _this.cx.closePath();
+
     this.canvasWrapper.selectAll("custom-link").each(function(d) {
       let _link: Selection<any, any, any, any> = d3.select(this);
       _this.cx.strokeStyle = "#000000";
