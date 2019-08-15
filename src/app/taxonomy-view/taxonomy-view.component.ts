@@ -172,9 +172,11 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
           d3.select(this).attr("fill", d3.select(this).attr("_fill"));
         }
       });
-    if(_this.checkWithinRadius([0, this.rootCoords], [_y, _x], 100)){
+    if(_this.checkWithinRadius([0, this.rootCoords], [_y, _x], 55)){
+      this.backButton.attr("visible", 'over');
+    }else if(_this.checkWithinRadius([0, this.rootCoords], [_y, _x], 100)){
       this.backButton.attr("visible", true);
-    } else {
+    }else {
       this.backButton.attr("visible", false);
     }
     if (!hoverEvent)
@@ -398,6 +400,48 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     let tx: number, ty: number, sx: number, sy: number;
     this.cx.clearRect(0, 0, this.screenWidth * (2 / 3), this.screenHeight);
 
+    if(this.backButton.attr("visible")=="true"){
+      let radius = 55;
+      _this.cx.save()
+      _this.cx.beginPath();
+      _this.cx.arc(0, this.rootCoords, radius, 0, 2 * Math.PI, false);
+      _this.cx.fillStyle = '#696969';
+      _this.cx.fill();
+      _this.cx.shadowColor = '#A9A9A9';
+      _this.cx.shadowBlur = 8;
+      _this.cx.lineWidth = 5;
+      _this.cx.strokeStyle = '#A9A9A9';
+      _this.cx.stroke();
+      _this.cx.closePath();
+      _this.cx.font = "17px 'Lato', sans-serif";
+      _this.cx.fillStyle = '#FFFFFF';
+      _this.cx.textAlign = "left";
+      _this.cx.textBaseline = 'middle';
+      _this.cx.fillText(" Back", 0, this.rootCoords);
+      _this.cx.restore()
+    }else if (this.backButton.attr("visible")=="over"){
+      _this.canvasEl.style.cursor = "pointer";
+      let radius = 56;
+      _this.cx.save()
+      _this.cx.setTransform(1.3,0.01,0,1.2,0,0);
+      _this.cx.beginPath();
+      _this.cx.arc(0, this.rootCoords, radius, 0, 2 * Math.PI, false);
+      _this.cx.fillStyle = '#696969';
+      _this.cx.fill();
+      _this.cx.shadowColor = 'black';
+      _this.cx.shadowBlur = 15;
+      _this.cx.lineWidth = 5;
+      _this.cx.strokeStyle = '#A9A9A9';
+      _this.cx.stroke();
+      _this.cx.closePath();
+      _this.cx.font = "17px 'Lato', sans-serif";
+      _this.cx.fillStyle = '#FFFFFF';
+      _this.cx.textAlign = "left";
+      _this.cx.textBaseline = 'middle';
+      _this.cx.fillText(" Back", 0, this.rootCoords);
+      _this.cx.restore()
+    }
+
     this.canvasWrapper.selectAll("custom-link").each(function(d) {
       let _link: Selection<any, any, any, any> = d3.select(this);
       _this.cx.strokeStyle = "#000000";
@@ -416,23 +460,6 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       _this.cx.closePath();
     });
 
-    if(this.backButton.attr("visible")=="true"){
-      _this.canvasEl.style.cursor = "pointer";
-      let radius = 60;
-      _this.cx.beginPath();
-      _this.cx.arc(0, this.rootCoords, radius, 0, 2 * Math.PI, false);
-      _this.cx.fillStyle = '#696969';
-      _this.cx.fill();
-      _this.cx.lineWidth = 5;
-      _this.cx.strokeStyle = '#A9A9A9';
-      _this.cx.stroke();
-      _this.cx.closePath();
-      _this.cx.font = "20px 'Lato', sans-serif";
-      _this.cx.fillStyle = '#FFFFFF';
-      _this.cx.textAlign = "left";
-      _this.cx.textBaseline = 'middle';
-      _this.cx.fillText(" Back", 0, this.rootCoords);
-    }
     // else {
       // _this.canvasEl.style.cursor = "pointer";
       // _this.cx.beginPath();
