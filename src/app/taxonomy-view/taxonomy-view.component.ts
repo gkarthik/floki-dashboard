@@ -32,6 +32,8 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   private searchterm: string;
   private pathogenic: boolean = false;
 
+  private backButton;
+
   // Styles
   private nodeSize: number = 5;
   private strokeWidth: number = 2;
@@ -80,6 +82,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   ngAfterViewInit() {
     this.setUpCanvas();
     this.canvasWrapper = d3.select("#wrapper");
+    this.backButton = d3.select("#wrapper").append("back-button").attr("id", "back-button");
     this.taxonomyTreeService.getTree().subscribe(_ => this.drawCanvas(1));
   }
 
@@ -131,7 +134,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     let _y = event.clientX - this.canvasEl.getBoundingClientRect()["x"];
     let _x = event.clientY - this.canvasEl.getBoundingClientRect()["y"];
     let _this = this;
-    if(_this.checkWithinRadius([0, this.screenHeight/3], [_y, _x], 200)){
+    if(_this.checkWithinRadius([0, this.screenHeight/2], [_y, _x], 55)){
       if (this.currentNode.parent != '-1'){
         _this.drawCanvas(+this.currentNode.parent)
       }
@@ -165,6 +168,31 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
           d3.select(this).attr("fill", d3.select(this).attr("_fill"));
         }
       });
+    if(_this.checkWithinRadius([0, this.screenHeight/2], [_y, _x], 55)){
+      this.backButton.attr("visible", true);
+      // _this.cx.translate(0, this.screenHeight/3); // translate to rectangle center
+                          // x = x + 0.5 * width
+                          // y = y + 0.5 * height
+      // _this.cx.moveTo(100, this.screenHeight/4);
+      // _this.cx.save()
+
+      // _this.cx.restore()
+      // var pattern = document.createElement('canvas');
+      // pattern.width = 10*2;
+      // pattern.height = 10*2;
+      // var pctx = pattern.getContext('2d');
+      // var ptn = _this.cx.createPattern(pattern, "repeat");
+      // _this.cx.fillStyle = ptn;
+      // _this.cx.beginPath();
+      // _this.cx.moveTo(100, this.screenHeight/4);
+      // _this.cx.lineTo(left+s.w+100+s.h-cornersin, top+100+s.h+cornersin);
+      // _this.cx.lineTo(left+100+cornersin, top+100+s.h+cornersin);
+      // _this.cx.lineTo(left+cornersin,top+s.h-cornersin);
+      // _this.cx.rotate(-45 * Math.PI/180);
+
+    } else {
+      this.backButton.attr("visible", false);
+    }
     if (!hoverEvent)
       this.canvasEl.style.cursor = "auto";
     this.renderCanvas();
@@ -177,6 +205,8 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
   }
 
   drawHeatmap(nodeEl, d: HierarchyPointNode<Taxon>, key: string): void {
+    this.cx.lineWidth = 1;
+    this.cx.strokeStyle = "#696969";
     var start_x = parseFloat(nodeEl.attr("x")) + this.heatmap.square_size,
       start_y = parseFloat(nodeEl.attr("y"));
     if (d.children != null) {
@@ -223,6 +253,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
         this.cx.lineWidth = 2;
         this.cx.strokeStyle = "#000000";
       }else{
+        this.cx.lineWidth = 1;
         this.cx.strokeStyle = "#696969";
       }
       this.cx.stroke();
@@ -382,18 +413,11 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
     let tx: number, ty: number, sx: number, sy: number;
     this.cx.clearRect(0, 0, this.screenWidth * (2 / 3), this.screenHeight);
 
-    _this.cx.beginPath();
-    _this.cx.arc(0, this.screenHeight/5, 100, 0, 2 * Math.PI, false);
-    // _this.cx.fillStyle = 'gray';
-    _this.cx.fill();
-    // _this.cx.lineWidth = 5;
-    // _this.cx.strokeStyle = '#003300';
-    _this.cx.stroke();
-    _this.cx.closePath();
-
     this.canvasWrapper.selectAll("custom-link").each(function(d) {
       let _link: Selection<any, any, any, any> = d3.select(this);
       _this.cx.strokeStyle = "#000000";
+      _this.cx.strokeStyle = _link.attr("stroke_style");
+      _this.cx.lineWidth = parseFloat(_link.attr("line_width"));
       _this.cx.beginPath();
       sx = parseFloat(_link.attr("sx"));
       sy = parseFloat(_link.attr("sy"));
@@ -403,22 +427,53 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       _this.cx.lineTo(0.5 * (tx + sx), sy);
       _this.cx.lineTo(0.5 * (tx + sx), ty);
       _this.cx.lineTo(tx, ty);
-      _this.cx.strokeStyle = _link.attr("stroke-style");
-      _this.cx.lineWidth = parseFloat(_link.attr("line-width"));
       _this.cx.stroke();
       _this.cx.closePath();
     });
+
+    if(this.backButton.attr("visible")=="true"){
+      _this.canvasEl.style.cursor = "pointer";
+      let radius = 60;
+      _this.cx.beginPath();
+      _this.cx.arc(0, this.screenHeight/2, radius, 0, 2 * Math.PI, false);
+      _this.cx.fillStyle = '#696969';
+      _this.cx.fill();
+      _this.cx.lineWidth = 5;
+      _this.cx.strokeStyle = '#A9A9A9';
+      _this.cx.stroke();
+      _this.cx.closePath();
+      _this.cx.font = "20px 'Lato', sans-serif";
+      _this.cx.fillStyle = '#FFFFFF';
+      _this.cx.textAlign = "left";
+      _this.cx.textBaseline = 'middle';
+      _this.cx.fillText(" Back", 0, this.screenHeight/2);
+    }else {
+      // _this.canvasEl.style.cursor = "pointer";
+      _this.cx.beginPath();
+      _this.cx.arc(0, this.screenHeight/2, 50, 0, 2 * Math.PI, false);
+      _this.cx.fillStyle = 'gray';
+      _this.cx.fill();
+      _this.cx.lineWidth = 5;
+      _this.cx.strokeStyle = '#696969';
+      _this.cx.stroke();
+      _this.cx.closePath();
+      _this.cx.font = "15px 'Lato', sans-serif";
+      _this.cx.fillStyle = '#FFFFFF';
+      _this.cx.textAlign = "left";
+      _this.cx.textBaseline = 'middle';
+      _this.cx.fillText(" Back", 0, this.screenHeight/2);
+    }
 
     this.canvasWrapper.selectAll("custom-node").each(function(d) {
       let _node = d3.select(this), x: number, y: number;
       x = parseFloat(_node.attr("x"));
       y = parseFloat(_node.attr("y"));
+      _this.cx.fillStyle = _node.attr("fill");
+      _this.cx.lineWidth = parseFloat(_node.attr("line_width"));
+      _this.cx.strokeStyle = _node.attr("stroke_style");
       _this.cx.moveTo(x, y);
       _this.cx.beginPath();
       _this.cx.arc(x, y, parseFloat(_node.attr("size")), 0, 2 * Math.PI);
-      _this.cx.fillStyle = _node.attr("fill");
-      _this.cx.lineWidth = parseFloat(_node.attr("line-width"));
-      _this.cx.strokeStyle = _node.attr("stroke-style");
       _this.cx.fill();
       _this.cx.stroke();
       _this.cx.closePath();
