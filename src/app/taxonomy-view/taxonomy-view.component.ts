@@ -200,9 +200,9 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       start_y = start_y + 22;
     }
     for (var i = 0; i < d.data[key].length; i++) {
-      if (d.children == null) {
+      if (d.depth == 2) {
         this.cx.fillStyle = this.scales[key][1](d.data[key][i]);
-      } else if (d.children.every(function(x) { return (x.children == null); })) {
+      } else if (d.depth == 1) {
         this.cx.fillStyle = this.scales[key][0](d.data[key][i]);
       } else {
         continue;
@@ -221,11 +221,11 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       this.cx.strokeStyle = "#000000";
     }
     for (var i = 0; i < d.data[key].length; i++) {
-      if (d.children == null) {
+      if (d.depth == 2) {
         this.cx.fillStyle = this.scales[key][1](d.data[key][i]);
-      } else if (d.children.every(function(x) { return (x.children == null); })) {
-        this.cx.fillStyle = this.scales[key][0](d.data[key][i]);
-      } else {
+    } else if (d.depth == 1) {
+      this.cx.fillStyle = this.scales[key][0](d.data[key][i]);
+    } else {
         continue;
       }
       if(d.data.over_threshold[i]==0){
