@@ -174,7 +174,7 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       });
     if(_this.checkWithinRadius([0, this.rootCoords], [_y, _x], 55)){
       this.backButton.attr("visible", 'over');
-    }else if(_this.checkWithinRadius([0, this.rootCoords], [_y, _x], 100)){
+    }else if(_this.checkWithinRadius([0, this.rootCoords], [_y, _x], 120)){
       this.backButton.attr("visible", true);
     }else {
       this.backButton.attr("visible", false);
@@ -420,16 +420,14 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       _this.cx.fillText(" Back", 0, this.rootCoords);
       _this.cx.restore()
     }else if (this.backButton.attr("visible")=="over"){
-      _this.canvasEl.style.cursor = "pointer";
       let radius = 56;
       _this.cx.save()
-      _this.cx.setTransform(1.3,0.01,0,1.2,0,0);
       _this.cx.beginPath();
       _this.cx.arc(0, this.rootCoords, radius, 0, 2 * Math.PI, false);
       _this.cx.fillStyle = '#696969';
       _this.cx.fill();
-      _this.cx.shadowColor = 'black';
-      _this.cx.shadowBlur = 15;
+      _this.cx.shadowColor = '#A9A9A9';
+      _this.cx.shadowBlur = 12;
       _this.cx.lineWidth = 5;
       _this.cx.strokeStyle = '#A9A9A9';
       _this.cx.stroke();
@@ -440,6 +438,8 @@ export class TaxonomyViewComponent implements AfterViewInit, OnInit {
       _this.cx.textBaseline = 'middle';
       _this.cx.fillText(" Back", 0, this.rootCoords);
       _this.cx.restore()
+      _this.canvasEl.style.cursor = "pointer";
+
     }
 
     this.canvasWrapper.selectAll("custom-link").each(function(d) {
