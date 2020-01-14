@@ -66,20 +66,22 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
 
   // creates scatter and cluster plot for the selected sample
   async realize() {
-    this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
-    this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, this.scoreThreshold);
-    let rootReads = this.taxonomyTreeService.getRootReads();
-    // this.umapModel(this.selectedSample, rootReads).then(t => this.umapPlot());
-    await this.contaminantService.prepareAnalysis(this.selectedSample, this.selectedTaxon, rootReads); // Sets current points in service
-    // this.updateplot();
-    // let t = await this.umapModel(this.selectedSample);
-    // this.umapPlot();
-    // let pred = await this.contaminantService.trainAndPredict();
-    this.updateplot()
-    let [pred, t] = await Promise.all([this.regressionAnalysis(), this.umapModel(this.selectedSample, rootReads)])
-    this.updateplot();
-    this.updateLine(pred);
-    this.updateCluster();
+    if (this.selectedSample){
+      this.contaminantService.getTree().subscribe(_ => { this.jsonData = _; });
+      this.jsonData = this.taxonomyTreeService.cutScores(this.jsonData, this.scoreThreshold);
+      let rootReads = this.taxonomyTreeService.getRootReads();
+      // this.umapModel(this.selectedSample, rootReads).then(t => this.umapPlot());
+      await this.contaminantService.prepareAnalysis(this.selectedSample, this.selectedTaxon, rootReads); // Sets current points in service
+      // this.updateplot();
+      // let t = await this.umapModel(this.selectedSample);
+      // this.umapPlot();
+      // let pred = await this.contaminantService.trainAndPredict();
+      this.updateplot()
+      let [pred, t] = await Promise.all([this.regressionAnalysis(), this.umapModel(this.selectedSample, rootReads)])
+      this.updateplot();
+      this.updateLine(pred);
+      this.updateCluster();
+    }
   }
 
   async regressionAnalysis(){
@@ -123,8 +125,10 @@ export class ContaminantComponent implements AfterViewInit, OnInit {
   }
 
   updateCluster() {
-    this.contaminantService.updateClustering(this.selectClusters)
-    this.umapPlot();
+    if (this.selectedSample){
+      this.contaminantService.updateClustering(this.selectClusters)
+      this.umapPlot();
+    }
   }
   // initializes plots for later use
   initializePlot() {

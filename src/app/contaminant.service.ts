@@ -813,8 +813,6 @@ export class ContaminantService {
     //     edge_data.push({source: query["name"], target: nearestNeighbor["name"], weight: probability})
     //   });
 
-    console.log(edge_data)
-
     let samplenames = _.cloneDeep(this.sampleData["name"])
 
     let community = louvain.jLouvain(samplenames, edge_data, 0.00000001);
